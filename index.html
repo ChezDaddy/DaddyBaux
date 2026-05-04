@@ -1,0 +1,2042 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Daddy'Baux</title>
+
+<!-- External libs -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+<style>
+:root {
+  --red:       #B7242B;
+  --red-dark:  #8f1a20;
+  --red-light: #f9e8e9;
+  --orange:    #d3692D;
+  --vert:      #8CADA1;
+  --ambre:     #E59E00;
+  --gris-bleu: #284351;
+  --beige:     #D7D0BF;
+  --bg:        #F5F3EF;
+  --surface:   #FFFFFF;
+  --border:    #E2DDD6;
+  --text:      #1A1714;
+  --muted:     #7A746C;
+  --radius:    10px;
+  --shadow:    0 2px 12px rgba(0,0,0,.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,.12);
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-body:    'DM Sans', system-ui, sans-serif;
+  --maison-color: var(--red);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:var(--text);font-size:14px}
+
+/* ── LAYOUT ── */
+#app{display:flex;flex-direction:column;min-height:100vh}
+
+/* ── LOGIN ── */
+#loginScreen{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;background:var(--gris-bleu);
+  background-image:
+    radial-gradient(ellipse 60% 50% at 20% 30%, rgba(183,36,43,.25) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 60% at 80% 70%, rgba(211,105,45,.15) 0%, transparent 60%);
+}
+.login-card{
+  background:var(--surface);border-radius:20px;
+  padding:48px 40px;width:380px;
+  box-shadow:0 24px 64px rgba(0,0,0,.25);
+}
+.login-logo{
+  font-family:var(--font-display);font-size:2rem;color:var(--red);
+  text-align:center;margin-bottom:4px;letter-spacing:-.5px;
+}
+.login-sub{text-align:center;color:var(--muted);font-size:.8rem;margin-bottom:32px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-weight:500;margin-bottom:6px;font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.form-group input{
+  width:100%;padding:10px 14px;border:1.5px solid var(--border);
+  border-radius:var(--radius);font-family:var(--font-body);font-size:.95rem;
+  background:var(--bg);transition:border-color .2s;outline:none;
+}
+.form-group input:focus{border-color:var(--red)}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:40px}
+.pw-toggle{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;color:var(--muted);font-size:1rem;padding:0;
+}
+.btn{
+  width:100%;padding:12px;background:var(--red);color:#fff;border:none;
+  border-radius:var(--radius);font-family:var(--font-body);font-size:.95rem;
+  font-weight:600;cursor:pointer;transition:background .2s,transform .1s;
+}
+.btn:hover{background:var(--red-dark)}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.5;cursor:default}
+#loginError{color:var(--red);font-size:.82rem;margin-top:10px;text-align:center;display:none}
+
+/* ── HEADER ── */
+header{
+  background:var(--maison-color);color:#fff;
+  display:flex;align-items:center;gap:16px;
+  padding:0 24px;height:56px;box-shadow:var(--shadow);
+  position:sticky;top:0;z-index:100;
+  transition:background .4s;
+}
+.header-logo{font-family:var(--font-display);font-size:1.4rem;letter-spacing:-.3px;white-space:nowrap}
+.header-spacer{flex:1}
+#maisonSelector{
+  background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35);
+  color:#fff;border-radius:8px;padding:5px 10px;font-family:var(--font-body);
+  font-size:.82rem;font-weight:500;cursor:pointer;outline:none;
+  backdrop-filter:blur(4px);
+}
+#maisonSelector option{color:var(--text);background:var(--surface)}
+.header-user{font-size:.8rem;opacity:.85;white-space:nowrap}
+.btn-logout{
+  background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35);
+  color:#fff;border-radius:8px;padding:5px 12px;cursor:pointer;
+  font-family:var(--font-body);font-size:.8rem;font-weight:500;
+  transition:background .2s;
+}
+.btn-logout:hover{background:rgba(255,255,255,.3)}
+
+/* ── NAV ── */
+nav{
+  background:var(--surface);border-bottom:1.5px solid var(--border);
+  display:flex;gap:0;padding:0 24px;
+  overflow-x:auto;
+}
+.nav-item{
+  padding:14px 18px;cursor:pointer;font-size:.85rem;font-weight:500;
+  color:var(--muted);border-bottom:2.5px solid transparent;
+  white-space:nowrap;transition:color .2s,border-color .2s;
+  display:flex;align-items:center;gap:6px;
+}
+.nav-item:hover{color:var(--text)}
+.nav-item.active{color:var(--maison-color);border-bottom-color:var(--maison-color)}
+
+/* ── MAIN ── */
+main{flex:1;padding:28px 24px;max-width:1100px;width:100%;margin:0 auto}
+
+/* ── CARDS / SECTIONS ── */
+.page{display:none}
+.page.active{display:block}
+.section-title{
+  font-family:var(--font-display);font-size:1.5rem;margin-bottom:6px;color:var(--text);
+}
+.section-sub{color:var(--muted);font-size:.85rem;margin-bottom:24px}
+
+.card{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:var(--radius);padding:24px;margin-bottom:20px;
+  box-shadow:var(--shadow);
+}
+.card-title{font-weight:600;margin-bottom:16px;font-size:.95rem;display:flex;align-items:center;gap:8px}
+
+/* ── GRID ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:700px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* ── STAT CARDS ── */
+.stat-card{
+  background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);
+  padding:20px;box-shadow:var(--shadow);
+}
+.stat-val{font-family:var(--font-display);font-size:2.2rem;color:var(--maison-color)}
+.stat-lbl{color:var(--muted);font-size:.78rem;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+
+/* ── TABLES ── */
+.table-wrap{overflow-x:auto;border-radius:var(--radius);border:1.5px solid var(--border)}
+table{width:100%;border-collapse:collapse;background:var(--surface)}
+th{
+  background:var(--bg);font-size:.75rem;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--muted);padding:10px 14px;text-align:left;font-weight:600;
+  border-bottom:1.5px solid var(--border);
+}
+td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:.88rem;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg)}
+
+/* ── BADGES ── */
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 9px;border-radius:20px;font-size:.72rem;font-weight:600;
+}
+.badge-draft{background:#FFF3CD;color:#856404}
+.badge-valid{background:#D1E7DD;color:#0A5C36}
+.badge-gen{background:#D5E8F0;color:var(--gris-bleu)}
+.badge-role-admin{background:var(--red-light);color:var(--red)}
+.badge-role-ops{background:#E8F0D5;color:#4A6B1F}
+.badge-role-maison{background:#E8F0FB;color:#1A4F8A}
+
+/* ── FORMS ── */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.field input,.field select,.field textarea{
+  width:100%;padding:9px 12px;border:1.5px solid var(--border);
+  border-radius:8px;font-family:var(--font-body);font-size:.9rem;
+  background:var(--bg);outline:none;transition:border-color .2s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--maison-color)}
+.field textarea{min-height:80px;resize:vertical}
+.field-row{display:flex;gap:12px}
+.field-row .field{flex:1}
+
+/* ── BUTTONS ── */
+.btn-sm{
+  padding:6px 14px;border-radius:8px;font-family:var(--font-body);
+  font-size:.8rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.btn-primary{background:var(--maison-color);color:#fff}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-secondary{background:var(--bg);color:var(--text);border:1.5px solid var(--border)}
+.btn-secondary:hover{border-color:var(--muted)}
+.btn-danger{background:#FEE2E2;color:#991B1B}
+.btn-danger:hover{background:#FECACA}
+.btn-full{width:100%;padding:12px;font-size:.95rem;border-radius:var(--radius)}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone{
+  border:2px dashed var(--border);border-radius:var(--radius);
+  padding:32px;text-align:center;cursor:pointer;
+  transition:border-color .2s,background .2s;background:var(--bg);
+}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--maison-color);background:rgba(183,36,43,.04)}
+.upload-zone input{display:none}
+.upload-icon{font-size:2rem;margin-bottom:8px}
+.upload-zone p{color:var(--muted);font-size:.85rem}
+.upload-zone strong{color:var(--maison-color)}
+.file-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--bg);border:1.5px solid var(--border);
+  border-radius:20px;padding:6px 14px;font-size:.82rem;margin-top:10px;
+}
+.file-pill-remove{cursor:pointer;color:var(--muted);font-size:1rem;line-height:1}
+.file-pill-remove:hover{color:var(--red)}
+
+/* ── STEPS ── */
+.steps{display:flex;gap:0;margin-bottom:28px;overflow-x:auto}
+.step{
+  flex:1;min-width:120px;padding:10px 16px;text-align:center;
+  font-size:.78rem;font-weight:600;color:var(--muted);
+  border-bottom:3px solid var(--border);transition:all .2s;
+  white-space:nowrap;
+}
+.step.done{color:var(--vert);border-color:var(--vert)}
+.step.active{color:var(--maison-color);border-color:var(--maison-color)}
+
+/* ── EXTRACTION FIELDS ── */
+.extract-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:600px){.extract-grid{grid-template-columns:1fr}}
+.extract-field{
+  background:var(--bg);border:1.5px solid var(--border);border-radius:8px;
+  padding:10px 12px;
+}
+.extract-field label{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px}
+.extract-field input{
+  width:100%;border:none;background:none;font-family:var(--font-body);
+  font-size:.88rem;color:var(--text);outline:none;padding:0;
+}
+.extract-field.changed{border-color:var(--orange);background:rgba(211,105,45,.06)}
+
+/* ── SPINNER / PROGRESS ── */
+.spinner{
+  width:36px;height:36px;border:3px solid var(--border);
+  border-top-color:var(--maison-color);border-radius:50%;
+  animation:spin .7s linear infinite;margin:auto;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progress-bar-wrap{background:var(--border);border-radius:4px;height:6px;overflow:hidden;margin-top:10px}
+.progress-bar{height:100%;background:var(--maison-color);border-radius:4px;transition:width .4s}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:24px;right:24px;z-index:9999;
+  background:var(--gris-bleu);color:#fff;padding:12px 20px;
+  border-radius:10px;font-size:.88rem;font-weight:500;
+  box-shadow:var(--shadow-lg);opacity:0;transform:translateY(10px);
+  transition:all .3s;pointer-events:none;max-width:320px;
+}
+#toast.show{opacity:1;transform:translateY(0)}
+#toast.success{background:#1A6B3C}
+#toast.error{background:var(--red-dark)}
+
+/* ── MODAL ── */
+.modal-bg{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
+  z-index:500;align-items:center;justify-content:center;
+}
+.modal-bg.open{display:flex}
+.modal{
+  background:var(--surface);border-radius:16px;padding:32px;
+  width:90%;max-width:500px;box-shadow:var(--shadow-lg);
+  max-height:90vh;overflow-y:auto;
+}
+.modal h3{font-family:var(--font-display);font-size:1.3rem;margin-bottom:16px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+
+/* ── MAISON CARD ── */
+.maison-card{
+  border:1.5px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;background:var(--surface);box-shadow:var(--shadow);
+  cursor:pointer;transition:box-shadow .2s,transform .2s;
+}
+.maison-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.maison-card-header{padding:16px 20px;color:#fff;font-weight:700;font-size:.95rem}
+.maison-card-body{padding:16px 20px;font-size:.85rem;color:var(--muted)}
+.maison-card-body strong{color:var(--text);font-size:.95rem;display:block;margin-bottom:4px}
+
+/* ── LOADING OVERLAY ── */
+#loadingOverlay{
+  display:none;position:fixed;inset:0;background:rgba(255,255,255,.8);
+  backdrop-filter:blur(4px);z-index:800;
+  flex-direction:column;align-items:center;justify-content:center;gap:16px;
+}
+#loadingOverlay.show{display:flex}
+#loadingOverlay p{color:var(--muted);font-size:.9rem;font-weight:500}
+
+/* ── EMPTY STATE ── */
+.empty{
+  text-align:center;padding:48px 20px;color:var(--muted);
+}
+.empty-icon{font-size:3rem;margin-bottom:12px;opacity:.4}
+.empty p{font-size:.9rem}
+
+/* ── ALERT ── */
+.alert{padding:12px 16px;border-radius:8px;font-size:.85rem;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px}
+.alert-info{background:#EBF5FB;color:#1A4F8A;border-left:4px solid #1A4F8A}
+.alert-warn{background:#FFF8E6;color:#856404;border-left:4px solid var(--ambre)}
+.alert-err{background:var(--red-light);color:var(--red-dark);border-left:4px solid var(--red)}
+
+/* ── AI BADGE ── */
+.ai-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  background:linear-gradient(135deg,#667eea,#764ba2);
+  color:#fff;border-radius:20px;padding:3px 10px;font-size:.7rem;font-weight:700;
+  letter-spacing:.3px;
+}
+
+/* ── UTILS ── */
+.mt-8{margin-top:8px}.mt-16{margin-top:16px}.mt-24{margin-top:24px}
+.mb-8{margin-bottom:8px}.mb-16{margin-bottom:16px}
+.text-right{text-align:right}.text-center{text-align:center}
+.text-muted{color:var(--muted)}.text-sm{font-size:.8rem}
+.font-bold{font-weight:700}
+.flex{display:flex}.items-center{align-items:center}.justify-between{justify-content:space-between}
+.gap-8{gap:8px}.gap-12{gap:12px}
+.hidden{display:none!important}
+.divider{border:none;border-top:1.5px solid var(--border);margin:20px 0}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     LOGIN
+════════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">Daddy'Baux</div>
+    <div class="login-sub">Rédaction automatisée des baux de location</div>
+    <div class="form-group">
+      <label>Identifiant</label>
+      <input id="loginUser" type="text" placeholder="Votre login" autocomplete="username"/>
+    </div>
+    <div class="form-group">
+      <label>Mot de passe</label>
+      <div class="pw-wrap">
+        <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password"/>
+        <button class="pw-toggle" onclick="togglePw()" type="button">👁</button>
+      </div>
+    </div>
+    <button class="btn" onclick="doLogin()">Se connecter</button>
+    <div id="loginError">Identifiant ou mot de passe incorrect</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     APP
+════════════════════════════════════════════ -->
+<div id="app" style="display:none">
+
+  <!-- HEADER -->
+  <header id="mainHeader">
+    <div class="header-logo">🏠 Daddy'Baux</div>
+    <select id="maisonSelector" onchange="onMaisonChange()" style="display:none"></select>
+    <div class="header-spacer"></div>
+    <span class="header-user" id="headerUser"></span>
+    <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+  </header>
+
+  <!-- NAV -->
+  <nav id="mainNav">
+    <div class="nav-item active" onclick="showPage('dashboard')" data-page="dashboard">📊 Tableau de bord</div>
+    <div class="nav-item" onclick="showPage('baux')" data-page="baux">📄 Baux</div>
+    <div class="nav-item" onclick="showPage('sepa')" data-page="sepa">🏦 Mandats SEPA</div>
+    <div class="nav-item" onclick="showPage('modeles')" data-page="modeles">📁 Modèles</div>
+    <div class="nav-item" onclick="showPage('historique')" data-page="historique">🕑 Historique</div>
+    <div class="nav-item hidden" id="navAdmin" onclick="showPage('admin')" data-page="admin">⚙️ Administration</div>
+  </nav>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- ── DASHBOARD ── -->
+    <div class="page active" id="page-dashboard">
+      <div class="section-title" id="dashTitle">Tableau de bord</div>
+      <div class="section-sub" id="dashSub">Vue d'ensemble de l'activité</div>
+      <div class="grid-3" id="dashStats">
+        <div class="stat-card"><div class="stat-val" id="statBaux">—</div><div class="stat-lbl">Baux générés</div></div>
+        <div class="stat-card"><div class="stat-val" id="statSepa">—</div><div class="stat-lbl">Mandats SEPA</div></div>
+        <div class="stat-card"><div class="stat-val" id="statMaisons">—</div><div class="stat-lbl">Maisons actives</div></div>
+      </div>
+      <div class="card mt-24">
+        <div class="card-title">📄 Derniers baux</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Locataire</th><th>Maison</th><th>Date</th><th>Statut</th><th></th></tr></thead>
+            <tbody id="dashBauxTable"><tr><td colspan="5" class="text-center text-muted" style="padding:24px">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BAUX ── -->
+    <div class="page" id="page-baux">
+      <div class="flex items-center justify-between mb-16">
+        <div>
+          <div class="section-title">Baux de location</div>
+          <div class="section-sub">Génération automatisée des baux ALUR</div>
+        </div>
+        <button class="btn-sm btn-primary btn-full" style="width:auto" onclick="showPage('nouveau-bail')">+ Nouveau bail</button>
+      </div>
+
+      <!-- Filtres -->
+      <div class="card" style="padding:16px">
+        <div class="flex gap-12">
+          <div class="field" style="margin:0;flex:1"><label>Statut</label>
+            <select id="filtreStatut" onchange="loadBaux()">
+              <option value="">Tous</option>
+              <option value="brouillon">Brouillon</option>
+              <option value="valide">Validé</option>
+              <option value="genere">Généré</option>
+            </select>
+          </div>
+          <div class="field" style="margin:0;flex:2"><label>Recherche</label>
+            <input id="filtreSearch" type="text" placeholder="Nom du locataire…" oninput="loadBaux()"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Locataire</th><th>Maison</th><th>Loyer</th><th>Date effet</th><th>Créé le</th><th>Statut</th><th>Actions</th></tr></thead>
+          <tbody id="bauxTable"><tr><td colspan="7" class="text-center text-muted" style="padding:24px">Chargement…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── NOUVEAU BAIL (wizard) ── -->
+    <div class="page" id="page-nouveau-bail">
+      <div class="flex items-center gap-12 mb-16">
+        <button class="btn-sm btn-secondary" onclick="showPage('baux')">← Retour</button>
+        <div>
+          <div class="section-title">Nouveau bail</div>
+          <div class="section-sub">Processus guidé en 4 étapes</div>
+        </div>
+      </div>
+
+      <div class="steps" id="bailSteps">
+        <div class="step active" id="step1lbl">1. Modèle</div>
+        <div class="step" id="step2lbl">2. Dossier PDF</div>
+        <div class="step" id="step3lbl">3. Vérification</div>
+        <div class="step" id="step4lbl">4. Génération</div>
+      </div>
+
+      <!-- Step 1 : Modèle -->
+      <div id="bailStep1">
+        <div class="card">
+          <div class="card-title">📄 Sélectionner le modèle de bail</div>
+          <div id="modelesDisponibles">Chargement des modèles…</div>
+          <hr class="divider"/>
+          <p class="text-sm text-muted mb-8">Ou téléverser un nouveau modèle DOCX :</p>
+          <div class="upload-zone" id="upModeleZone" onclick="document.getElementById('upModeleInput').click()"
+               ondragover="dragOver(event,'upModeleZone')" ondragleave="dragLeave('upModeleZone')" ondrop="dropFile(event,'upModeleInput','upModeleZone')">
+            <input type="file" id="upModeleInput" accept=".docx" onchange="fileChosen('upModeleInput','modeleChosenPill','modeleChosenName')"/>
+            <div class="upload-icon">📄</div>
+            <p><strong>Cliquer</strong> ou glisser un fichier .docx ici</p>
+          </div>
+          <div id="modeleChosenPill" class="hidden mt-8"></div>
+        </div>
+        <div class="text-right"><button class="btn-sm btn-primary" onclick="bailStep1Next()">Suivant →</button></div>
+      </div>
+
+      <!-- Step 2 : PDF -->
+      <div id="bailStep2" class="hidden">
+        <div class="card">
+          <div class="card-title">📂 Déposer le dossier locataire (PDF) <span class="ai-badge">✨ IA</span></div>
+          <div class="alert alert-info">L'IA va extraire automatiquement les informations du locataire. Dossier de renseignements, pièce d'identité, justificatifs…</div>
+          <div class="upload-zone" id="upPdfZone" onclick="document.getElementById('upPdfInput').click()"
+               ondragover="dragOver(event,'upPdfZone')" ondragleave="dragLeave('upPdfZone')" ondrop="dropFile(event,'upPdfInput','upPdfZone')">
+            <input type="file" id="upPdfInput" accept=".pdf" onchange="fileChosen('upPdfInput','pdfChosenPill','pdfChosenName')"/>
+            <div class="upload-icon">📂</div>
+            <p><strong>Cliquer</strong> ou glisser le PDF du dossier locataire</p>
+          </div>
+          <div id="pdfChosenPill" class="hidden mt-8"></div>
+        </div>
+        <div class="flex gap-8 justify-between mt-8">
+          <button class="btn-sm btn-secondary" onclick="bailGoStep(1)">← Précédent</button>
+          <button class="btn-sm btn-primary" onclick="bailStep2Next()">Extraire par IA →</button>
+        </div>
+      </div>
+
+      <!-- Step 3 : Vérification -->
+      <div id="bailStep3" class="hidden">
+        <div class="card">
+          <div class="card-title">✅ Vérification et correction des données extraites <span class="ai-badge">✨ IA</span></div>
+          <div class="alert alert-warn" id="extractionAlert"></div>
+          <div id="extractionForm"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">⚙️ Options du bail</div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Type de logement</label>
+              <select id="optMeuble"><option value="meublé">Meublé</option><option value="non meublé">Non meublé</option></select>
+            </div>
+            <div class="field">
+              <label>Équipement PMR</label>
+              <select id="optPMR"><option value="Non équipé PMR">Non équipé PMR</option><option value="Équipé PMR">Équipé PMR</option></select>
+            </div>
+            <div class="field">
+              <label>Garant</label>
+              <select id="optGarant" onchange="toggleGarantFields()"><option value="non">Sans garant</option><option value="oui">Avec garant</option></select>
+            </div>
+          </div>
+          <div id="garantFields" class="hidden">
+            <div class="field-row">
+              <div class="field"><label>Nom garant</label><input id="garantNom" type="text"/></div>
+              <div class="field"><label>Prénom garant</label><input id="garantPrenom" type="text"/></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Adresse garant</label><input id="garantAdresse" type="text"/></div>
+              <div class="field"><label>Profession garant</label><input id="garantProfession" type="text"/></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">💶 Conditions financières</div>
+          <div class="grid-2">
+            <div class="field"><label>Loyer mensuel (€)</label><input id="finLoyer" type="number" step="0.01" placeholder="650.00"/></div>
+            <div class="field"><label>Provision charges (€)</label><input id="finCharges" type="number" step="0.01" placeholder="80.00"/></div>
+            <div class="field"><label>Dépôt de garantie (€)</label><input id="finDepot" type="number" step="0.01" placeholder="650.00"/></div>
+            <div class="field"><label>Honoraires (€)</label><input id="finHonoraires" type="number" step="0.01" placeholder="0.00"/></div>
+            <div class="field"><label>Date de prise d'effet</label><input id="finDateEffet" type="date"/></div>
+            <div class="field"><label>Durée du bail</label><input id="finDuree" type="text" placeholder="1 an" value="1 an"/></div>
+          </div>
+        </div>
+        <div class="flex gap-8 justify-between mt-8">
+          <button class="btn-sm btn-secondary" onclick="bailGoStep(2)">← Précédent</button>
+          <div class="flex gap-8">
+            <button class="btn-sm btn-secondary" onclick="saveBrouillon()">💾 Sauvegarder brouillon</button>
+            <button class="btn-sm btn-primary" onclick="bailStep3Next()">Générer le bail →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4 : Génération -->
+      <div id="bailStep4" class="hidden">
+        <div class="card text-center">
+          <div class="card-title text-center">🎉 Bail généré</div>
+          <p class="text-muted mb-16">Le bail a été généré avec succès et archivé dans l'historique.</p>
+          <button class="btn-sm btn-primary" id="btnTelecharger" onclick="downloadGeneratedBail()">⬇️ Télécharger le DOCX</button>
+          <div class="mt-16">
+            <button class="btn-sm btn-secondary" onclick="showPage('historique')">Voir l'historique</button>
+            <button class="btn-sm btn-secondary" onclick="showPage('baux')">Retour aux baux</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SEPA ── -->
+    <div class="page" id="page-sepa">
+      <div class="flex items-center justify-between mb-16">
+        <div>
+          <div class="section-title">Mandats SEPA</div>
+          <div class="section-sub">Génération des mandats de prélèvement</div>
+        </div>
+        <button class="btn-sm btn-primary" onclick="showSepaWizard()">+ Nouveau mandat</button>
+      </div>
+      <div id="sepaList">Chargement…</div>
+
+      <!-- Wizard SEPA -->
+      <div id="sepaWizard" class="hidden">
+        <div class="steps">
+          <div class="step active" id="sepaStep1lbl">1. Modèle SEPA</div>
+          <div class="step" id="sepaStep2lbl">2. RIB / IBAN</div>
+          <div class="step" id="sepaStep3lbl">3. Validation</div>
+          <div class="step" id="sepaStep4lbl">4. Téléchargement</div>
+        </div>
+        <!-- Step S1 -->
+        <div id="sepaS1">
+          <div class="card">
+            <div class="card-title">📄 Modèle Mandat SEPA (.docx)</div>
+            <div id="sepaModelesDisponibles">Chargement…</div>
+            <hr class="divider"/>
+            <div class="upload-zone" onclick="document.getElementById('upSepaModele').click()">
+              <input type="file" id="upSepaModele" accept=".docx" onchange="fileChosen('upSepaModele','sepaModelePill','sepaModeleName')"/>
+              <div class="upload-icon">📄</div>
+              <p><strong>Cliquer</strong> pour téléverser un modèle SEPA</p>
+            </div>
+            <div id="sepaModelePill" class="hidden mt-8"></div>
+          </div>
+          <div class="text-right"><button class="btn-sm btn-primary" onclick="sepaStep1Next()">Suivant →</button></div>
+        </div>
+        <!-- Step S2 -->
+        <div id="sepaS2" class="hidden">
+          <div class="card">
+            <div class="card-title">🏦 RIB / IBAN du locataire <span class="ai-badge">✨ IA</span></div>
+            <div class="alert alert-info">L'IA va extraire l'IBAN et les informations bancaires depuis le PDF du RIB.</div>
+            <div class="upload-zone" onclick="document.getElementById('upRib').click()">
+              <input type="file" id="upRib" accept=".pdf" onchange="fileChosen('upRib','ribPill','ribName')"/>
+              <div class="upload-icon">📑</div>
+              <p><strong>Cliquer</strong> pour déposer le PDF du RIB</p>
+            </div>
+            <div id="ribPill" class="hidden mt-8"></div>
+          </div>
+          <div class="flex gap-8 justify-between mt-8">
+            <button class="btn-sm btn-secondary" onclick="sepaGoStep(1)">← Précédent</button>
+            <button class="btn-sm btn-primary" onclick="sepaStep2Next()">Extraire l'IBAN →</button>
+          </div>
+        </div>
+        <!-- Step S3 -->
+        <div id="sepaS3" class="hidden">
+          <div class="card">
+            <div class="card-title">✅ Vérification des données SEPA</div>
+            <div class="grid-2">
+              <div class="field"><label>IBAN</label><input id="sepaIban" type="text" placeholder="FRxx xxxx xxxx xxxx"/></div>
+              <div class="field"><label>BIC / SWIFT</label><input id="sepaBic" type="text" placeholder="BNPAFRPPXXX"/></div>
+              <div class="field"><label>Titulaire du compte</label><input id="sepaTitulaire" type="text"/></div>
+              <div class="field"><label>Nom de la banque</label><input id="sepaBanque" type="text"/></div>
+              <div class="field"><label>Locataire (prénom nom)</label><input id="sepaLocataire" type="text"/></div>
+              <div class="field"><label>Adresse locataire</label><input id="sepaAdresse" type="text"/></div>
+            </div>
+          </div>
+          <div class="flex gap-8 justify-between mt-8">
+            <button class="btn-sm btn-secondary" onclick="sepaGoStep(2)">← Précédent</button>
+            <button class="btn-sm btn-primary" onclick="sepaStep3Next()">Générer le mandat →</button>
+          </div>
+        </div>
+        <!-- Step S4 -->
+        <div id="sepaS4" class="hidden">
+          <div class="card text-center">
+            <div class="card-title text-center">🎉 Mandat SEPA généré</div>
+            <p class="text-muted mb-16">Le mandat a été généré avec succès.</p>
+            <button class="btn-sm btn-primary" id="btnSepaDownload" onclick="downloadSepa()">⬇️ Télécharger le DOCX</button>
+            <div class="mt-16"><button class="btn-sm btn-secondary" onclick="resetSepaWizard()">Nouveau mandat</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MODÈLES ── -->
+    <div class="page" id="page-modeles">
+      <div class="section-title">Modèles de documents</div>
+      <div class="section-sub">Gestion des modèles DOCX par maison</div>
+
+      <div class="card">
+        <div class="card-title">📤 Téléverser un modèle</div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Type de modèle</label>
+            <select id="upModeleType"><option value="bail">Bail de location</option><option value="sepa">Mandat SEPA</option></select>
+          </div>
+          <div class="field">
+            <label>Maison associée</label>
+            <select id="upModeleMaison"></select>
+          </div>
+        </div>
+        <div class="upload-zone" onclick="document.getElementById('upModeleFile').click()">
+          <input type="file" id="upModeleFile" accept=".docx" onchange="fileChosen('upModeleFile','uploadModelePill','uploadModeleName')"/>
+          <div class="upload-icon">📄</div>
+          <p><strong>Cliquer</strong> pour sélectionner un modèle .docx</p>
+          <p class="text-sm mt-8">Utilisez les placeholders <code>{{nom_du_champ}}</code></p>
+        </div>
+        <div id="uploadModelePill" class="hidden mt-8"></div>
+        <div class="text-right mt-16">
+          <button class="btn-sm btn-primary" onclick="uploadModele()">📤 Téléverser</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📁 Modèles disponibles</div>
+        <div id="modelesList">Chargement…</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">ℹ️ Placeholders reconnus</div>
+        <div class="grid-2">
+          <div>
+            <p class="text-sm font-bold mb-8">Identité locataire</p>
+            <code class="text-sm">{{nom}} {{prenom}} {{date_naissance}} {{lieu_naissance}} {{profession}} {{nationalite}} {{adresse_actuelle}}</code>
+          </div>
+          <div>
+            <p class="text-sm font-bold mb-8">Logement</p>
+            <code class="text-sm">{{adresse_logement}} {{surface}} {{nb_pieces}} {{appartement_meuble}} {{equipement_pmr}} {{dpe_classe}} {{ges_classe}} {{depenses_energie}}</code>
+          </div>
+          <div>
+            <p class="text-sm font-bold mb-8">Conditions financières</p>
+            <code class="text-sm">{{loyer}} {{charges}} {{depot_garantie}} {{honoraires}} {{date_effet}} {{duree_bail}}</code>
+          </div>
+          <div>
+            <p class="text-sm font-bold mb-8">Garant (optionnel)</p>
+            <code class="text-sm">{{garant_nom}} {{garant_prenom}} {{garant_adresse}} {{garant_profession}}</code>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── HISTORIQUE ── -->
+    <div class="page" id="page-historique">
+      <div class="section-title">Historique des documents</div>
+      <div class="section-sub">Tous les baux et mandats SEPA générés</div>
+
+      <div class="card" style="padding:16px">
+        <div class="flex gap-12">
+          <div class="field" style="margin:0;flex:1"><label>Type</label>
+            <select id="histType" onchange="loadHistorique()">
+              <option value="">Tous</option>
+              <option value="bail">Baux</option>
+              <option value="sepa">Mandats SEPA</option>
+            </select>
+          </div>
+          <div class="field" style="margin:0;flex:1"><label>Période du</label>
+            <input id="histDateDeb" type="date" onchange="loadHistorique()"/>
+          </div>
+          <div class="field" style="margin:0;flex:1"><label>Au</label>
+            <input id="histDateFin" type="date" onchange="loadHistorique()"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Type</th><th>Locataire</th><th>Maison</th><th>Date génération</th><th>Statut</th><th>Actions</th></tr></thead>
+          <tbody id="histTable"><tr><td colspan="6" class="text-center text-muted" style="padding:24px">Chargement…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── ADMIN ── -->
+    <div class="page" id="page-admin">
+      <div class="section-title">Administration</div>
+      <div class="section-sub">Gestion des maisons, utilisateurs et données</div>
+
+      <!-- Maisons -->
+      <div class="card">
+        <div class="card-title flex justify-between">
+          <span>🏠 Gestion des maisons</span>
+          <button class="btn-sm btn-primary" onclick="openModal('modalNewMaison')">+ Nouvelle maison</button>
+        </div>
+        <div id="adminMaisonsList">Chargement…</div>
+      </div>
+
+      <!-- Utilisateurs -->
+      <div class="card">
+        <div class="card-title flex justify-between">
+          <span>👤 Utilisateurs</span>
+          <button class="btn-sm btn-primary" onclick="openModal('modalNewUser')">+ Nouvel utilisateur</button>
+        </div>
+        <div id="adminUsersList">Chargement…</div>
+      </div>
+
+      <!-- Purge -->
+      <div class="card">
+        <div class="card-title">🗑️ Archivage et purge</div>
+        <div class="alert alert-warn">⚠️ La purge supprime définitivement toutes les données antérieures à la date choisie. Un export CSV est créé automatiquement avant suppression.</div>
+        <div class="field-row mt-16">
+          <div class="field"><label>Purger les données antérieures au</label><input id="purgeDate" type="date"/></div>
+          <div class="field" style="align-self:flex-end;margin-bottom:14px">
+            <button class="btn-sm btn-danger" onclick="confirmPurge()">🗑️ Lancer la purge</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MODALS
+════════════════════════════════════════════ -->
+
+<!-- Nouvelle maison -->
+<div class="modal-bg" id="modalNewMaison">
+  <div class="modal">
+    <h3>🏠 Nouvelle maison</h3>
+    <div class="field"><label>Nom</label><input id="newMaisonNom" type="text" placeholder="Maison Autun"/></div>
+    <div class="field"><label>Ville</label><input id="newMaisonVille" type="text" placeholder="Autun"/></div>
+    <div class="field"><label>Adresse</label><input id="newMaisonAdresse" type="text" placeholder="12 rue de la Paix"/></div>
+    <div class="field"><label>Login</label><input id="newMaisonLogin" type="text" placeholder="MaisonXXX"/></div>
+    <div class="field"><label>Mot de passe initial</label><input id="newMaisonPassword" type="text" placeholder="Henon12345!"/></div>
+    <div class="field"><label>Couleur (hex)</label><input id="newMaisonColor" type="color" value="#d3692D"/></div>
+    <div class="modal-actions">
+      <button class="btn-sm btn-secondary" onclick="closeModal('modalNewMaison')">Annuler</button>
+      <button class="btn-sm btn-primary" onclick="createMaison()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nouvel utilisateur -->
+<div class="modal-bg" id="modalNewUser">
+  <div class="modal">
+    <h3>👤 Nouvel utilisateur</h3>
+    <div class="field"><label>Login</label><input id="newUserLogin" type="text"/></div>
+    <div class="field"><label>Mot de passe</label><input id="newUserPassword" type="text"/></div>
+    <div class="field"><label>Rôle</label>
+      <select id="newUserRole">
+        <option value="admin">Administrateur</option>
+        <option value="operations">Opérations</option>
+        <option value="maison">Responsable Maison</option>
+      </select>
+    </div>
+    <div class="field" id="newUserMaisonField">
+      <label>Maison associée</label>
+      <select id="newUserMaison"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm btn-secondary" onclick="closeModal('modalNewUser')">Annuler</button>
+      <button class="btn-sm btn-primary" onclick="createUser()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation suppression -->
+<div class="modal-bg" id="modalConfirm">
+  <div class="modal">
+    <h3 id="confirmTitle">Confirmer la suppression</h3>
+    <p id="confirmMsg" class="text-muted"></p>
+    <div class="modal-actions">
+      <button class="btn-sm btn-secondary" onclick="closeModal('modalConfirm')">Non, annuler</button>
+      <button class="btn-sm btn-danger" id="confirmOkBtn">Oui, supprimer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <p id="loadingMsg">Traitement en cours…</p>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+
+<!-- ═══════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════ -->
+<script>
+// ─────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────
+const SUPABASE_URL  = 'https://cafkamkmwupkehvbcmli.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhZmthbWttd3Vwa2VodmJjbWxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjc1NjMsImV4cCI6MjA5Mjk0MzU2M30.JAnyxpKZ87vfIfPet4vnSiWKY6OKDCNADdKUvxcBnB8';
+const ANTHROPIC_KEY = ''; // Laisser vide : la clé est stockée dans Supabase (Edge Function ou settings)
+
+const MAISON_COLORS = {
+  'Autun': '#d3692D',
+  'La Madeleine': '#8CADA1',
+  'Douai': '#d3692D',
+  'Clermont-Ferrand': '#E59E00'
+};
+
+// Utilisateurs hardcodés (stockés obfusqués en base64 dans localStorage)
+// Production : migrer vers Supabase Auth
+const USERS_DEFAULT = [
+  {login:'Finance',    password:'Henon63122!', role:'admin',      maison:null,         display:'Administrateur'},
+  {login:'Arnaud',     password:'Henon69004!', role:'operations', maison:null,         display:'Dirigeant'},
+  {login:'Operations', password:'Henon69004!', role:'operations', maison:null,         display:'Opérations'},
+  {login:'MaisonAUT',  password:'Henon71400!', role:'maison',     maison:'Autun',      display:'Autun'},
+  {login:'MaisonLMD',  password:'Henon59110!', role:'maison',     maison:'La Madeleine', display:'La Madeleine'},
+  {login:'MaisonDOU',  password:'Henon59500!', role:'maison',     maison:'Douai',      display:'Douai'},
+  {login:'MaisonCFD',  password:'Henon63100!', role:'maison',     maison:'Clermont-Ferrand', display:'Clermont-Ferrand'},
+];
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let currentUser   = null;
+let currentMaison = null; // {id, nom, couleur}
+let allMaisons    = [];
+let bailWizard    = { step:1, modeleFile:null, modeleId:null, pdfFile:null, extracted:{}, generatedBlob:null };
+let sepaWizard    = { step:1, modeleFile:null, pdfFile:null, extracted:{}, generatedBlob:null };
+
+// ─────────────────────────────────────────────
+// SUPABASE HELPERS
+// ─────────────────────────────────────────────
+async function sbFetch(path, opts={}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || 'return=representation',
+      ...opts.headers
+    },
+    method: opts.method || 'GET',
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+async function sbStorageUpload(bucket, path, file) {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': file.type || 'application/octet-stream'
+    },
+    body: file
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function sbStorageDownload(bucket, path) {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  if (!res.ok) throw new Error('Fichier introuvable dans le storage');
+  return res.blob();
+}
+
+async function ensureBuckets() {
+  // Tente de créer les buckets silencieusement (idempotent)
+  for (const name of ['modeles','dossiers','baux-generes']) {
+    try {
+      await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+        method:'POST',
+        headers:{'apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}`,'Content-Type':'application/json'},
+        body: JSON.stringify({id:name, name, public:false})
+      });
+    } catch(e) {}
+  }
+}
+
+// ─────────────────────────────────────────────
+// DB INIT (crée les tables si besoin via RPC ou skip)
+// ─────────────────────────────────────────────
+async function initDB() {
+  // On tente d'insérer les maisons par défaut si la table est vide
+  try {
+    const maisons = await sbFetch('maisons?select=id');
+    if (maisons.length === 0) {
+      const defaults = [
+        {nom:'Autun',             ville:'Autun',             adresse:'',  couleur:'#d3692D', login:'MaisonAUT', password_hash: btoa('Henon71400!')},
+        {nom:'La Madeleine',      ville:'La Madeleine',      adresse:'',  couleur:'#8CADA1', login:'MaisonLMD', password_hash: btoa('Henon59110!')},
+        {nom:'Douai',             ville:'Douai',             adresse:'',  couleur:'#d3692D', login:'MaisonDOU', password_hash: btoa('Henon59500!')},
+        {nom:'Clermont-Ferrand',  ville:'Clermont-Ferrand',  adresse:'',  couleur:'#E59E00', login:'MaisonCFD', password_hash: btoa('Henon63100!')},
+      ];
+      for (const m of defaults) {
+        await sbFetch('maisons', {method:'POST', body:m}).catch(()=>{});
+      }
+    }
+  } catch(e) {
+    console.warn('Table maisons non trouvée – à créer via SQL', e);
+  }
+}
+
+// ─────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────
+function getUsers() {
+  const stored = localStorage.getItem('db_users');
+  if (stored) return JSON.parse(atob(stored));
+  localStorage.setItem('db_users', btoa(JSON.stringify(USERS_DEFAULT)));
+  return USERS_DEFAULT;
+}
+
+function doLogin() {
+  const login = document.getElementById('loginUser').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  const users = getUsers();
+  const user  = users.find(u => u.login === login && u.password === pass);
+  if (!user) {
+    document.getElementById('loginError').style.display = 'block';
+    return;
+  }
+  document.getElementById('loginError').style.display = 'none';
+  sessionStorage.setItem('session', btoa(JSON.stringify(user)));
+  currentUser = user;
+  bootApp();
+}
+
+function doLogout() {
+  sessionStorage.removeItem('session');
+  currentUser = null;
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+function togglePw() {
+  const i = document.getElementById('loginPass');
+  i.type = i.type === 'password' ? 'text' : 'password';
+}
+
+document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+document.getElementById('loginUser').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+
+// ─────────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────────
+async function bootApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+
+  document.getElementById('headerUser').textContent = `${currentUser.display} · ${currentUser.role}`;
+
+  // Admin tab
+  if (currentUser.role === 'admin') {
+    document.getElementById('navAdmin').classList.remove('hidden');
+  }
+
+  await ensureBuckets();
+  await loadMaisons();
+  buildMaisonSelector();
+  showPage('dashboard');
+}
+
+async function loadMaisons() {
+  try {
+    allMaisons = await sbFetch('maisons?select=*&order=nom');
+    if (!allMaisons || allMaisons.length === 0) {
+      // Fallback local
+      allMaisons = [
+        {id:'aut', nom:'Autun',            ville:'Autun',            couleur:'#d3692D'},
+        {id:'lmd', nom:'La Madeleine',     ville:'La Madeleine',     couleur:'#8CADA1'},
+        {id:'dou', nom:'Douai',            ville:'Douai',            couleur:'#d3692D'},
+        {id:'cfd', nom:'Clermont-Ferrand', ville:'Clermont-Ferrand', couleur:'#E59E00'},
+      ];
+    }
+  } catch(e) {
+    allMaisons = [
+      {id:'aut', nom:'Autun',            ville:'Autun',            couleur:'#d3692D'},
+      {id:'lmd', nom:'La Madeleine',     ville:'La Madeleine',     couleur:'#8CADA1'},
+      {id:'dou', nom:'Douai',            ville:'Douai',            couleur:'#d3692D'},
+      {id:'cfd', nom:'Clermont-Ferrand', ville:'Clermont-Ferrand', couleur:'#E59E00'},
+    ];
+  }
+}
+
+function buildMaisonSelector() {
+  const sel = document.getElementById('maisonSelector');
+  const canSwitch = currentUser.role === 'admin' || currentUser.role === 'operations';
+
+  let maisons = allMaisons;
+  if (currentUser.role === 'maison') {
+    maisons = allMaisons.filter(m => m.nom === currentUser.maison);
+  }
+
+  sel.innerHTML = maisons.map(m => `<option value="${m.id}">${m.nom}</option>`).join('');
+
+  if (canSwitch && maisons.length > 1) {
+    sel.style.display = 'inline-block';
+  }
+
+  currentMaison = maisons[0] || null;
+  applyMaisonColor();
+
+  // Populate other selects
+  populateMaisonSelects();
+}
+
+function onMaisonChange() {
+  const id = document.getElementById('maisonSelector').value;
+  currentMaison = allMaisons.find(m => m.id == id) || allMaisons[0];
+  applyMaisonColor();
+  refreshCurrentPage();
+}
+
+function applyMaisonColor() {
+  if (!currentMaison) return;
+  const c = currentMaison.couleur || '#B7242B';
+  document.documentElement.style.setProperty('--maison-color', c);
+  // Update active nav items
+  document.querySelectorAll('.nav-item.active').forEach(el => {
+    el.style.color = c;
+    el.style.borderBottomColor = c;
+  });
+}
+
+function populateMaisonSelects() {
+  ['upModeleMaison','newUserMaison'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = allMaisons.map(m=>`<option value="${m.id}">${m.nom}</option>`).join('');
+  });
+}
+
+function refreshCurrentPage() {
+  const active = document.querySelector('.nav-item.active');
+  if (active) {
+    const page = active.dataset.page;
+    if (page) loadPageData(page);
+  }
+}
+
+// ─────────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.remove('active');
+    n.style.color = '';
+    n.style.borderBottomColor = '';
+  });
+
+  const page = document.getElementById(`page-${name}`);
+  if (page) page.classList.add('active');
+
+  const navItem = document.querySelector(`[data-page="${name}"]`);
+  if (navItem) {
+    navItem.classList.add('active');
+    const c = currentMaison?.couleur || '#B7242B';
+    navItem.style.color = c;
+    navItem.style.borderBottomColor = c;
+  }
+
+  loadPageData(name);
+}
+
+function loadPageData(name) {
+  switch(name) {
+    case 'dashboard':  loadDashboard(); break;
+    case 'baux':       loadBaux(); break;
+    case 'modeles':    loadModeles(); break;
+    case 'historique': loadHistorique(); break;
+    case 'admin':      loadAdmin(); break;
+    case 'sepa':       loadSepa(); break;
+    case 'nouveau-bail': initBailWizard(); break;
+  }
+}
+
+// ─────────────────────────────────────────────
+// DASHBOARD
+// ─────────────────────────────────────────────
+async function loadDashboard() {
+  if (currentMaison) {
+    document.getElementById('dashTitle').textContent = `Tableau de bord · ${currentMaison.nom}`;
+  }
+  try {
+    const [baux, sepas] = await Promise.all([
+      sbFetch(`baux?select=id,statut,locataire_nom,maison_id,loyer,date_effet,created_at&order=created_at.desc&limit=5${currentMaison && currentUser.role==='maison' ? `&maison_id=eq.${currentMaison.id}` : ''}`).catch(()=>[]),
+      sbFetch(`mandats_sepa?select=id&${currentMaison && currentUser.role==='maison' ? `maison_id=eq.${currentMaison.id}` : ''}`).catch(()=>[])
+    ]);
+
+    document.getElementById('statBaux').textContent = baux?.length ?? '—';
+    document.getElementById('statSepa').textContent = sepas?.length ?? '—';
+    document.getElementById('statMaisons').textContent = currentUser.role==='maison' ? 1 : allMaisons.length;
+
+    const tbody = document.getElementById('dashBauxTable');
+    if (!baux || baux.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="empty-icon">📄</div><p>Aucun bail généré pour le moment</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = baux.map(b => {
+      const m = allMaisons.find(x => x.id == b.maison_id);
+      return `<tr>
+        <td>${b.locataire_nom || '—'}</td>
+        <td>${m?.nom || '—'}</td>
+        <td>${b.created_at ? new Date(b.created_at).toLocaleDateString('fr-FR') : '—'}</td>
+        <td>${badgeStatut(b.statut)}</td>
+        <td><button class="btn-sm btn-secondary" onclick="showPage('historique')">Voir</button></td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('dashBauxTable').innerHTML = `<tr><td colspan="5" class="text-center text-muted">Connectez Supabase pour voir les données</td></tr>`;
+  }
+}
+
+// ─────────────────────────────────────────────
+// BAUX
+// ─────────────────────────────────────────────
+async function loadBaux() {
+  const statut = document.getElementById('filtreStatut').value;
+  const search = document.getElementById('filtreSearch').value.toLowerCase();
+  const tbody  = document.getElementById('bauxTable');
+  tbody.innerHTML = `<tr><td colspan="7" class="text-center"><div class="spinner" style="margin:16px auto"></div></td></tr>`;
+
+  try {
+    let q = `baux?select=*&order=created_at.desc`;
+    if (currentUser.role === 'maison' && currentMaison) q += `&maison_id=eq.${currentMaison.id}`;
+    if (statut) q += `&statut=eq.${statut}`;
+
+    let baux = await sbFetch(q);
+    if (search) baux = baux.filter(b => (b.locataire_nom||'').toLowerCase().includes(search));
+
+    if (!baux.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty-icon">📄</div><p>Aucun bail trouvé</p></div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = baux.map(b => {
+      const m = allMaisons.find(x => x.id == b.maison_id);
+      return `<tr>
+        <td><strong>${b.locataire_nom||'—'}</strong></td>
+        <td>${m?.nom||'—'}</td>
+        <td>${b.loyer ? montantFr(b.loyer)+'€' : '—'}</td>
+        <td>${b.date_effet || '—'}</td>
+        <td>${b.created_at ? new Date(b.created_at).toLocaleDateString('fr-FR') : '—'}</td>
+        <td>${badgeStatut(b.statut)}</td>
+        <td class="flex gap-8">
+          ${b.docx_path ? `<button class="btn-sm btn-primary" onclick="downloadBailFromStorage('${b.docx_path}','bail_${b.locataire_nom}.docx')">⬇️</button>` : ''}
+          <button class="btn-sm btn-danger" onclick="deleteBail('${b.id}')">🗑️</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:24px">Erreur de chargement — ${e.message}</td></tr>`;
+  }
+}
+
+async function deleteBail(id) {
+  confirm2('Supprimer ce bail ?', 'Cette action est irréversible.', async () => {
+    await sbFetch(`baux?id=eq.${id}`, {method:'DELETE'});
+    toast('Bail supprimé', 'success');
+    loadBaux();
+  });
+}
+
+// ─────────────────────────────────────────────
+// BAIL WIZARD
+// ─────────────────────────────────────────────
+function initBailWizard() {
+  bailWizard = { step:1, modeleFile:null, modeleId:null, pdfFile:null, extracted:{}, generatedBlob:null };
+  bailGoStep(1);
+  loadModelesForWizard();
+}
+
+function bailGoStep(n) {
+  bailWizard.step = n;
+  [1,2,3,4].forEach(i => {
+    document.getElementById(`bailStep${i}`).classList.toggle('hidden', i!==n);
+    const lbl = document.getElementById(`step${i}lbl`);
+    lbl.className = 'step' + (i<n?' done': i===n?' active':'');
+  });
+}
+
+async function loadModelesForWizard() {
+  const container = document.getElementById('modelesDisponibles');
+  try {
+    let q = `modeles?select=*&type_doc=eq.bail&order=created_at.desc`;
+    if (currentMaison && currentUser.role==='maison') q += `&maison_id=eq.${currentMaison.id}`;
+    const mods = await sbFetch(q);
+    if (!mods.length) { container.innerHTML = '<p class="text-muted text-sm">Aucun modèle disponible — téléversez-en un ci-dessous.</p>'; return; }
+    container.innerHTML = `<p class="text-sm text-muted mb-8">Choisir un modèle existant :</p>` + mods.map(m => {
+      const mai = allMaisons.find(x=>x.id==m.maison_id);
+      return `<label style="display:flex;align-items:center;gap:10px;padding:8px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;margin-bottom:6px;font-size:.85rem">
+        <input type="radio" name="modeleChoice" value="${m.id}" data-path="${m.storage_path}" onchange="bailWizard.modeleId=this.value;bailWizard.modelePath=this.dataset.path"/>
+        <span><strong>${m.nom}</strong> — ${mai?.nom||'—'} <span class="text-muted">(v${m.version||1})</span></span>
+      </label>`;
+    }).join('');
+  } catch(e) {
+    container.innerHTML = '<p class="text-muted text-sm">Impossible de charger les modèles.</p>';
+  }
+}
+
+function bailStep1Next() {
+  const radioChecked = document.querySelector('input[name="modeleChoice"]:checked');
+  if (!radioChecked && !bailWizard.modeleFile) {
+    toast('Sélectionnez ou téléversez un modèle DOCX', 'error'); return;
+  }
+  bailGoStep(2);
+}
+
+async function bailStep2Next() {
+  const pdfInput = document.getElementById('upPdfInput');
+  if (!pdfInput.files[0]) { toast('Déposez le PDF du dossier locataire', 'error'); return; }
+  bailWizard.pdfFile = pdfInput.files[0];
+  showLoading('Extraction IA en cours… (jusqu\'à 60s)');
+  try {
+    const extracted = await extractPdfWithAI(bailWizard.pdfFile, 'bail');
+    bailWizard.extracted = extracted;
+    hideLoading();
+    renderExtractionForm(extracted);
+    bailGoStep(3);
+  } catch(e) {
+    hideLoading();
+    toast('Erreur extraction : ' + e.message, 'error');
+    // Passer quand même à l'étape 3 avec champs vides
+    bailWizard.extracted = {};
+    renderExtractionForm({});
+    bailGoStep(3);
+  }
+}
+
+function renderExtractionForm(data) {
+  const alert = document.getElementById('extractionAlert');
+  const form  = document.getElementById('extractionForm');
+
+  const filled = Object.values(data).filter(v=>v).length;
+  const total  = 10;
+  alert.className = `alert ${filled>6?'alert-info':'alert-warn'}`;
+  alert.innerHTML = `<span>✨ IA</span><span>${filled} champs extraits automatiquement. Vérifiez et corrigez si nécessaire.</span>`;
+
+  const FIELDS = [
+    {key:'nom',             label:'Nom',             placeholder:'DUPONT'},
+    {key:'prenom',          label:'Prénom',           placeholder:'Jean'},
+    {key:'date_naissance',  label:'Date de naissance',placeholder:'01/01/1990'},
+    {key:'lieu_naissance',  label:'Lieu de naissance',placeholder:'Paris'},
+    {key:'profession',      label:'Profession',       placeholder:'Salarié'},
+    {key:'nationalite',     label:'Nationalité',      placeholder:'Française'},
+    {key:'adresse_actuelle',label:'Adresse actuelle', placeholder:'12 rue…'},
+    {key:'adresse_logement',label:'Adresse du logement',placeholder:''},
+    {key:'surface',         label:'Surface (m²)',     placeholder:'25'},
+    {key:'nb_pieces',       label:'Nb pièces',        placeholder:'1'},
+    {key:'dpe_classe',      label:'Classe DPE',       placeholder:'D'},
+    {key:'ges_classe',      label:'Classe GES',       placeholder:'D'},
+    {key:'depenses_energie',label:'Dépenses énergie',  placeholder:'800'},
+  ];
+
+  form.innerHTML = `<div class="extract-grid">` + FIELDS.map(f => `
+    <div class="extract-field ${data[f.key]?'':''}">
+      <label>${f.label}</label>
+      <input type="text" id="ext_${f.key}" value="${data[f.key]||''}" placeholder="${f.placeholder}"
+             onchange="bailWizard.extracted['${f.key}']=this.value;this.parentElement.classList.add('changed')"/>
+    </div>`).join('') + `</div>`;
+
+  // Pré-remplir conditions financières si extraites
+  if (data.loyer)      document.getElementById('finLoyer').value     = data.loyer;
+  if (data.date_effet) document.getElementById('finDateEffet').value = data.date_effet;
+}
+
+function toggleGarantFields() {
+  const v = document.getElementById('optGarant').value;
+  document.getElementById('garantFields').classList.toggle('hidden', v!=='oui');
+}
+
+async function saveBrouillon() {
+  const data = collectBailData();
+  try {
+    await sbFetch('baux', {method:'POST', body:{...data, statut:'brouillon', maison_id: currentMaison?.id}});
+    toast('Brouillon sauvegardé', 'success');
+  } catch(e) { toast('Erreur : '+e.message, 'error'); }
+}
+
+async function bailStep3Next() {
+  const data = collectBailData();
+  showLoading('Génération du DOCX…');
+  try {
+    // 1. Récupérer le modèle
+    let modeleBlob;
+    if (bailWizard.modeleFile) {
+      modeleBlob = bailWizard.modeleFile;
+    } else if (bailWizard.modelePath) {
+      modeleBlob = await sbStorageDownload('modeles', bailWizard.modelePath);
+    } else {
+      throw new Error('Aucun modèle sélectionné');
+    }
+
+    // 2. Générer le DOCX
+    const docxBlob = await generateDocx(modeleBlob, data);
+    bailWizard.generatedBlob = docxBlob;
+
+    // 3. Upload dans Supabase Storage
+    const fileName = `bail_${data.nom}_${data.prenom}_${Date.now()}.docx`;
+    let docxPath = null;
+    try {
+      await sbStorageUpload('baux-generes', fileName, docxBlob);
+      docxPath = fileName;
+    } catch(e) { console.warn('Upload storage échoué:', e); }
+
+    // 4. Enregistrer en DB
+    await sbFetch('baux', {
+      method:'POST',
+      body:{
+        locataire_nom:`${data.nom} ${data.prenom}`,
+        maison_id: currentMaison?.id,
+        loyer: parseFloat(data.loyer)||null,
+        date_effet: data.date_effet||null,
+        statut:'genere',
+        docx_path: docxPath,
+        data_json: JSON.stringify(data)
+      }
+    }).catch(()=>{});
+
+    hideLoading();
+    bailGoStep(4);
+    toast('Bail généré avec succès !', 'success');
+  } catch(e) {
+    hideLoading();
+    toast('Erreur génération : '+e.message, 'error');
+  }
+}
+
+function collectBailData() {
+  const ext = bailWizard.extracted || {};
+  const KEYS = ['nom','prenom','date_naissance','lieu_naissance','profession','nationalite',
+                'adresse_actuelle','adresse_logement','surface','nb_pieces','dpe_classe','ges_classe','depenses_energie'];
+  const data = {};
+  KEYS.forEach(k => {
+    const el = document.getElementById(`ext_${k}`);
+    data[k] = el ? el.value : (ext[k]||'');
+  });
+  data.appartement_meuble = document.getElementById('optMeuble').value;
+  data.equipement_pmr     = document.getElementById('optPMR').value;
+  data.loyer              = document.getElementById('finLoyer').value;
+  data.charges            = document.getElementById('finCharges').value;
+  data.depot_garantie     = document.getElementById('finDepot').value;
+  data.honoraires         = document.getElementById('finHonoraires').value;
+  data.date_effet         = document.getElementById('finDateEffet').value;
+  data.duree_bail         = document.getElementById('finDuree').value;
+  if (document.getElementById('optGarant').value === 'oui') {
+    data.garant_nom        = document.getElementById('garantNom').value;
+    data.garant_prenom     = document.getElementById('garantPrenom').value;
+    data.garant_adresse    = document.getElementById('garantAdresse').value;
+    data.garant_profession = document.getElementById('garantProfession').value;
+  }
+  return data;
+}
+
+function downloadGeneratedBail() {
+  if (bailWizard.generatedBlob) {
+    const d = bailWizard.extracted || {};
+    saveAs(bailWizard.generatedBlob, `bail_${d.nom||'locataire'}_${d.prenom||''}.docx`);
+  }
+}
+
+// ─────────────────────────────────────────────
+// DOCX GENERATION (docxtemplater via CDN)
+// ─────────────────────────────────────────────
+async function loadDocxtemplater() {
+  if (window.PizZip && window.Docxtemplater) return;
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip.min.js');
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.44.4/docxtemplater.js');
+}
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+async function generateDocx(modeleBlob, data) {
+  await loadDocxtemplater();
+
+  // Préparer les données avec formatage
+  const tplData = {...data};
+
+  // Montants en toutes lettres
+  const montants = ['loyer','charges','depot_garantie','honoraires'];
+  montants.forEach(k => {
+    if (tplData[k]) {
+      const val = parseFloat(tplData[k]);
+      if (!isNaN(val)) {
+        tplData[k] = `${nombreEnLettres(val)} (${montantFr(val)}€)`;
+      }
+    }
+  });
+
+  // Date en français
+  if (tplData.date_effet) {
+    const d = new Date(tplData.date_effet);
+    if (!isNaN(d)) tplData.date_effet = d.toLocaleDateString('fr-FR');
+  }
+
+  const arrayBuffer = await modeleBlob.arrayBuffer();
+  const zip = new PizZip(arrayBuffer);
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    delimiters: { start:'{{', end:'}}' }
+  });
+
+  doc.render(tplData);
+  const out = doc.getZip().generate({ type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  return out;
+}
+
+// ─────────────────────────────────────────────
+// AI EXTRACTION
+// ─────────────────────────────────────────────
+async function extractPdfWithAI(pdfFile, type) {
+  // Convertir en base64
+  const b64 = await fileToBase64(pdfFile);
+
+  const systemPrompt = type === 'bail'
+    ? `Tu es un assistant juridique français. Analyse ce PDF (dossier locataire) et extrais les informations suivantes au format JSON strict. Ne mets aucun texte avant ou après le JSON. Si une info est absente, mets une chaîne vide "".
+Champs attendus: nom, prenom, date_naissance (JJ/MM/AAAA), lieu_naissance, profession, nationalite, adresse_actuelle, adresse_logement, surface, nb_pieces, dpe_classe, ges_classe, depenses_energie, loyer, date_effet`
+    : `Tu es un assistant financier. Analyse ce PDF (RIB/relevé bancaire) et extrais au format JSON strict: iban, bic, titulaire, banque, adresse_banque. Si absent, chaîne vide. JSON uniquement.`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [{
+        role: 'user',
+        content: [{
+          type: 'document',
+          source: { type: 'base64', media_type: 'application/pdf', data: b64 }
+        }, {
+          type: 'text',
+          text: 'Extrais les informations de ce document.'
+        }]
+      }]
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`API Anthropic: ${response.status} — ${err}`);
+  }
+
+  const result = await response.json();
+  const text = result.content?.find(c=>c.type==='text')?.text || '{}';
+  try {
+    return JSON.parse(text.replace(/```json|```/g,'').trim());
+  } catch(e) {
+    console.warn('Parse JSON extraction:', e, text);
+    return {};
+  }
+}
+
+// ─────────────────────────────────────────────
+// SEPA WIZARD
+// ─────────────────────────────────────────────
+function showSepaWizard() {
+  sepaWizard = { step:1, modeleFile:null, pdfFile:null, extracted:{}, generatedBlob:null };
+  document.getElementById('sepaWizard').classList.remove('hidden');
+  sepaGoStep(1);
+  loadSepaModeles();
+}
+
+function sepaGoStep(n) {
+  sepaWizard.step = n;
+  [1,2,3,4].forEach(i => {
+    document.getElementById(`sepaS${i}`).classList.toggle('hidden', i!==n);
+    const lbl = document.getElementById(`sepaStep${i}lbl`);
+    lbl.className = 'step' + (i<n?' done': i===n?' active':'');
+  });
+}
+
+async function loadSepaModeles() {
+  const c = document.getElementById('sepaModelesDisponibles');
+  try {
+    const mods = await sbFetch('modeles?select=*&type_doc=eq.sepa&order=created_at.desc');
+    if (!mods.length) { c.innerHTML = '<p class="text-sm text-muted">Aucun modèle SEPA — téléversez-en un.</p>'; return; }
+    c.innerHTML = mods.map(m => `
+      <label style="display:flex;align-items:center;gap:10px;padding:8px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;margin-bottom:6px;font-size:.85rem">
+        <input type="radio" name="sepaModeleChoice" value="${m.id}" data-path="${m.storage_path}"/>
+        <span><strong>${m.nom}</strong></span>
+      </label>`).join('');
+  } catch(e) { c.innerHTML = '<p class="text-sm text-muted">Impossible de charger.</p>'; }
+}
+
+function sepaStep1Next() {
+  const radio = document.querySelector('input[name="sepaModeleChoice"]:checked');
+  if (!radio && !document.getElementById('upSepaModele').files[0]) {
+    toast('Sélectionnez un modèle SEPA', 'error'); return;
+  }
+  if (document.getElementById('upSepaModele').files[0]) sepaWizard.modeleFile = document.getElementById('upSepaModele').files[0];
+  if (radio) { sepaWizard.modelePath = radio.dataset.path; }
+  sepaGoStep(2);
+}
+
+async function sepaStep2Next() {
+  const f = document.getElementById('upRib').files[0];
+  if (!f) { toast('Déposez le PDF du RIB', 'error'); return; }
+  sepaWizard.pdfFile = f;
+  showLoading('Extraction IBAN en cours…');
+  try {
+    const ext = await extractPdfWithAI(f, 'sepa');
+    sepaWizard.extracted = ext;
+    hideLoading();
+    // Remplir le form
+    if (ext.iban)      document.getElementById('sepaIban').value      = ext.iban;
+    if (ext.bic)       document.getElementById('sepaBic').value        = ext.bic;
+    if (ext.titulaire) document.getElementById('sepaTitulaire').value  = ext.titulaire;
+    if (ext.banque)    document.getElementById('sepaBanque').value      = ext.banque;
+    sepaGoStep(3);
+  } catch(e) {
+    hideLoading();
+    toast('Extraction partielle — vérifiez les champs', 'error');
+    sepaGoStep(3);
+  }
+}
+
+async function sepaStep3Next() {
+  const data = {
+    iban:        document.getElementById('sepaIban').value,
+    bic:         document.getElementById('sepaBic').value,
+    titulaire:   document.getElementById('sepaTitulaire').value,
+    banque:      document.getElementById('sepaBanque').value,
+    locataire:   document.getElementById('sepaLocataire').value,
+    adresse:     document.getElementById('sepaAdresse').value,
+    date_mandat: new Date().toLocaleDateString('fr-FR'),
+  };
+
+  showLoading('Génération du mandat SEPA…');
+  try {
+    let modeleBlob;
+    if (sepaWizard.modeleFile) modeleBlob = sepaWizard.modeleFile;
+    else if (sepaWizard.modelePath) modeleBlob = await sbStorageDownload('modeles', sepaWizard.modelePath);
+    else throw new Error('Aucun modèle');
+
+    const blob = await generateDocx(modeleBlob, data);
+    sepaWizard.generatedBlob = blob;
+
+    // DB
+    await sbFetch('mandats_sepa', {method:'POST', body:{
+      locataire_nom: data.locataire,
+      maison_id: currentMaison?.id,
+      iban: data.iban,
+      statut: 'genere'
+    }}).catch(()=>{});
+
+    hideLoading();
+    sepaGoStep(4);
+    toast('Mandat SEPA généré !', 'success');
+  } catch(e) {
+    hideLoading();
+    toast('Erreur : '+e.message, 'error');
+  }
+}
+
+function downloadSepa() {
+  if (sepaWizard.generatedBlob) saveAs(sepaWizard.generatedBlob, `mandat_sepa_${sepaWizard.extracted?.titulaire||'locataire'}.docx`);
+}
+function resetSepaWizard() {
+  document.getElementById('sepaWizard').classList.add('hidden');
+  showSepaWizard();
+}
+
+async function loadSepa() {
+  const c = document.getElementById('sepaList');
+  try {
+    const rows = await sbFetch('mandats_sepa?select=*&order=created_at.desc');
+    if (!rows.length) { c.innerHTML = '<div class="empty"><div class="empty-icon">🏦</div><p>Aucun mandat SEPA</p></div>'; return; }
+    c.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Locataire</th><th>IBAN</th><th>Maison</th><th>Date</th><th>Statut</th></tr></thead>
+      <tbody>${rows.map(r=>{
+        const m=allMaisons.find(x=>x.id==r.maison_id);
+        return `<tr><td>${r.locataire_nom||'—'}</td><td><code>${r.iban||'—'}</code></td><td>${m?.nom||'—'}</td>
+                <td>${r.created_at?new Date(r.created_at).toLocaleDateString('fr-FR'):'—'}</td>
+                <td>${badgeStatut(r.statut)}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+  } catch(e) { c.innerHTML = '<p class="text-muted text-sm">Connectez Supabase pour voir les mandats.</p>'; }
+}
+
+// ─────────────────────────────────────────────
+// MODELES
+// ─────────────────────────────────────────────
+async function loadModeles() {
+  const c = document.getElementById('modelesList');
+  try {
+    const mods = await sbFetch('modeles?select=*&order=created_at.desc');
+    if (!mods.length) { c.innerHTML = '<div class="empty"><div class="empty-icon">📁</div><p>Aucun modèle téléversé</p></div>'; return; }
+    c.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Nom</th><th>Type</th><th>Maison</th><th>Version</th><th>Date</th><th></th></tr></thead>
+      <tbody>${mods.map(m=>{
+        const mai = allMaisons.find(x=>x.id==m.maison_id);
+        return `<tr>
+          <td><strong>${m.nom}</strong></td>
+          <td><span class="badge ${m.type_doc==='bail'?'badge-gen':'badge-valid'}">${m.type_doc}</span></td>
+          <td>${mai?.nom||'Toutes'}</td>
+          <td>v${m.version||1}</td>
+          <td>${m.created_at?new Date(m.created_at).toLocaleDateString('fr-FR'):'—'}</td>
+          <td><button class="btn-sm btn-danger" onclick="deleteModele('${m.id}','${m.storage_path}')">🗑️</button></td>
+        </tr>`;
+      }).join('')}</tbody></table></div>`;
+  } catch(e) { c.innerHTML = '<p class="text-muted text-sm">Impossible de charger les modèles.</p>'; }
+}
+
+async function uploadModele() {
+  const file  = document.getElementById('upModeleFile').files[0];
+  const type  = document.getElementById('upModeleType').value;
+  const mai   = document.getElementById('upModeleMaison').value;
+  if (!file) { toast('Sélectionnez un fichier .docx', 'error'); return; }
+
+  showLoading('Téléversement du modèle…');
+  try {
+    // Versionning : compter les versions existantes
+    const existing = await sbFetch(`modeles?select=id&type_doc=eq.${type}&maison_id=eq.${mai}`).catch(()=>[]);
+    const version = (existing?.length||0) + 1;
+    const path = `${type}/${mai}/${Date.now()}_${file.name}`;
+
+    await sbStorageUpload('modeles', path, file);
+
+    await sbFetch('modeles', {method:'POST', body:{
+      nom: file.name.replace('.docx',''),
+      type_doc: type,
+      maison_id: mai,
+      storage_path: path,
+      version
+    }});
+
+    hideLoading();
+    toast('Modèle téléversé avec succès', 'success');
+    loadModeles();
+  } catch(e) {
+    hideLoading();
+    toast('Erreur : '+e.message, 'error');
+  }
+}
+
+async function deleteModele(id, path) {
+  confirm2('Supprimer ce modèle ?', 'Les baux déjà générés ne seront pas affectés.', async () => {
+    await sbFetch(`modeles?id=eq.${id}`, {method:'DELETE'});
+    toast('Modèle supprimé', 'success');
+    loadModeles();
+  });
+}
+
+// ─────────────────────────────────────────────
+// HISTORIQUE
+// ─────────────────────────────────────────────
+async function loadHistorique() {
+  const type  = document.getElementById('histType').value;
+  const deb   = document.getElementById('histDateDeb').value;
+  const fin   = document.getElementById('histDateFin').value;
+  const tbody = document.getElementById('histTable');
+  tbody.innerHTML = `<tr><td colspan="6" class="text-center"><div class="spinner" style="margin:16px auto"></div></td></tr>`;
+
+  try {
+    let rows = [];
+    if (!type || type === 'bail') {
+      let q = `baux?select=*&order=created_at.desc`;
+      if (currentUser.role==='maison'&&currentMaison) q+=`&maison_id=eq.${currentMaison.id}`;
+      if (deb) q+=`&created_at=gte.${deb}`;
+      if (fin) q+=`&created_at=lte.${fin}T23:59:59`;
+      const b = await sbFetch(q).catch(()=>[]);
+      rows.push(...(b||[]).map(r=>({...r, _type:'bail'})));
+    }
+    if (!type || type === 'sepa') {
+      let q = `mandats_sepa?select=*&order=created_at.desc`;
+      if (currentUser.role==='maison'&&currentMaison) q+=`&maison_id=eq.${currentMaison.id}`;
+      if (deb) q+=`&created_at=gte.${deb}`;
+      if (fin) q+=`&created_at=lte.${fin}T23:59:59`;
+      const s = await sbFetch(q).catch(()=>[]);
+      rows.push(...(s||[]).map(r=>({...r, _type:'sepa'})));
+    }
+    rows.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="empty-icon">🕑</div><p>Aucun document trouvé</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows.map(r => {
+      const m = allMaisons.find(x=>x.id==r.maison_id);
+      return `<tr>
+        <td><span class="badge ${r._type==='bail'?'badge-gen':'badge-valid'}">${r._type}</span></td>
+        <td>${r.locataire_nom||'—'}</td>
+        <td>${m?.nom||'—'}</td>
+        <td>${r.created_at?new Date(r.created_at).toLocaleDateString('fr-FR'):' —'}</td>
+        <td>${badgeStatut(r.statut)}</td>
+        <td>
+          ${r.docx_path?`<button class="btn-sm btn-primary" onclick="downloadBailFromStorage('${r.docx_path}','doc.docx')">⬇️ DOCX</button>`:''}
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Erreur : ${e.message}</td></tr>`;
+  }
+}
+
+async function downloadBailFromStorage(path, filename) {
+  try {
+    showLoading('Téléchargement…');
+    const blob = await sbStorageDownload('baux-generes', path);
+    saveAs(blob, filename);
+    hideLoading();
+  } catch(e) {
+    hideLoading();
+    toast('Erreur téléchargement : '+e.message, 'error');
+  }
+}
+
+// ─────────────────────────────────────────────
+// ADMIN
+// ─────────────────────────────────────────────
+async function loadAdmin() {
+  if (currentUser.role !== 'admin') return;
+
+  // Maisons
+  const ml = document.getElementById('adminMaisonsList');
+  try {
+    const maisons = await sbFetch('maisons?select=*&order=nom');
+    ml.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Nom</th><th>Ville</th><th>Login</th><th>Couleur</th><th></th></tr></thead>
+      <tbody>${(maisons||allMaisons).map(m=>`<tr>
+        <td><strong>${m.nom}</strong></td>
+        <td>${m.ville||'—'}</td>
+        <td><code>${m.login||'—'}</code></td>
+        <td><span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:${m.couleur||'#ccc'}"></span></td>
+        <td><button class="btn-sm btn-secondary" onclick="resetMaisonPassword('${m.id}','${m.nom}')">🔑 Reset</button></td>
+      </tr>`).join('')}</tbody></table></div>`;
+  } catch(e) { ml.innerHTML = '<p class="text-muted text-sm">Impossible de charger.</p>'; }
+
+  // Utilisateurs
+  const ul = document.getElementById('adminUsersList');
+  const users = getUsers();
+  ul.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Login</th><th>Rôle</th><th>Maison</th><th></th></tr></thead>
+    <tbody>${users.map((u,i)=>`<tr>
+      <td><strong>${u.login}</strong></td>
+      <td><span class="badge badge-role-${u.role==='admin'?'admin':u.role==='operations'?'ops':'maison'}">${u.role}</span></td>
+      <td>${u.maison||'—'}</td>
+      <td><button class="btn-sm btn-danger" onclick="deleteUser(${i})">🗑️</button></td>
+    </tr>`).join('')}</tbody></table></div>`;
+
+  // Date purge par défaut
+  const q = new Date(); q.setMonth(q.getMonth()-3);
+  document.getElementById('purgeDate').value = q.toISOString().split('T')[0];
+}
+
+async function createMaison() {
+  const nom      = document.getElementById('newMaisonNom').value.trim();
+  const ville    = document.getElementById('newMaisonVille').value.trim();
+  const adresse  = document.getElementById('newMaisonAdresse').value.trim();
+  const login    = document.getElementById('newMaisonLogin').value.trim();
+  const password = document.getElementById('newMaisonPassword').value;
+  const couleur  = document.getElementById('newMaisonColor').value;
+  if (!nom||!login||!password) { toast('Champs obligatoires manquants', 'error'); return; }
+
+  try {
+    await sbFetch('maisons', {method:'POST', body:{nom,ville,adresse,login,password_hash:btoa(password),couleur}});
+    // Ajouter l'utilisateur local
+    const users = getUsers();
+    users.push({login, password, role:'maison', maison:nom, display:nom});
+    localStorage.setItem('db_users', btoa(JSON.stringify(users)));
+
+    closeModal('modalNewMaison');
+    toast('Maison créée', 'success');
+    await loadMaisons();
+    buildMaisonSelector();
+    loadAdmin();
+  } catch(e) { toast('Erreur : '+e.message, 'error'); }
+}
+
+function createUser() {
+  const login    = document.getElementById('newUserLogin').value.trim();
+  const password = document.getElementById('newUserPassword').value;
+  const role     = document.getElementById('newUserRole').value;
+  const maisonId = document.getElementById('newUserMaison').value;
+  const maison   = allMaisons.find(m=>m.id==maisonId)?.nom||null;
+  if (!login||!password) { toast('Login et mot de passe requis', 'error'); return; }
+
+  const users = getUsers();
+  users.push({login, password, role, maison, display:login});
+  localStorage.setItem('db_users', btoa(JSON.stringify(users)));
+  closeModal('modalNewUser');
+  toast('Utilisateur créé', 'success');
+  loadAdmin();
+}
+
+function deleteUser(idx) {
+  confirm2('Supprimer cet utilisateur ?', '', () => {
+    const users = getUsers();
+    users.splice(idx,1);
+    localStorage.setItem('db_users', btoa(JSON.stringify(users)));
+    toast('Utilisateur supprimé', 'success');
+    loadAdmin();
+  });
+}
+
+function resetMaisonPassword(id, nom) {
+  const np = prompt(`Nouveau mot de passe pour ${nom} :`);
+  if (!np) return;
+  sbFetch(`maisons?id=eq.${id}`, {method:'PATCH', body:{password_hash:btoa(np)}})
+    .then(()=>toast('Mot de passe réinitialisé', 'success'))
+    .catch(e=>toast('Erreur : '+e.message,'error'));
+}
+
+async function confirmPurge() {
+  const date = document.getElementById('purgeDate').value;
+  if (!date) { toast('Sélectionnez une date', 'error'); return; }
+
+  confirm2(
+    '⚠️ Purge des données',
+    `Toutes les données antérieures au ${date} seront supprimées. Un export CSV sera créé d'abord.`,
+    async () => {
+      showLoading('Export CSV puis purge…');
+      try {
+        // Export CSV des baux
+        const baux = await sbFetch(`baux?select=*&created_at=lt.${date}`);
+        if (baux?.length) exportCSV(baux, `export_baux_avant_${date}.csv`);
+
+        // Purge
+        await sbFetch(`baux?created_at=lt.${date}`, {method:'DELETE'});
+        await sbFetch(`mandats_sepa?created_at=lt.${date}`, {method:'DELETE'});
+        hideLoading();
+        toast('Purge effectuée', 'success');
+      } catch(e) { hideLoading(); toast('Erreur : '+e.message,'error'); }
+    }
+  );
+}
+
+// ─────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────
+function badgeStatut(s) {
+  const map = {brouillon:'badge-draft',valide:'badge-valid',genere:'badge-gen'};
+  return `<span class="badge ${map[s]||'badge-draft'}">${s||'—'}</span>`;
+}
+
+function montantFr(val) {
+  return new Intl.NumberFormat('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(val);
+}
+
+// Conversion nombre → lettres (français, limité à valeurs raisonnables de loyer)
+function nombreEnLettres(n) {
+  if (n === 0) return 'zéro';
+  const u=['','un','deux','trois','quatre','cinq','six','sept','huit','neuf',
+           'dix','onze','douze','treize','quatorze','quinze','seize',
+           'dix-sept','dix-huit','dix-neuf'];
+  const d=['','','vingt','trente','quarante','cinquante','soixante','soixante','quatre-vingt','quatre-vingt'];
+  function dizaine(n) {
+    if (n<20) return u[n];
+    const di=Math.floor(n/10), un=n%10;
+    if (di===7||di===9) return d[di]+(un===1&&di===7?'-et-':'-')+(u[10+un]||u[un]);
+    return d[di]+(un===1&&di!==8?'-et-':un?'-':'')+u[un];
+  }
+  function centaine(n) {
+    const c=Math.floor(n/100), r=n%100;
+    if (c===0) return dizaine(r);
+    return (c>1?u[c]+'-':'')+`cent${r?'-'+dizaine(r):'s'}`.replace('cents-','cent-');
+  }
+  const entier = Math.floor(n);
+  const dec    = Math.round((n-entier)*100);
+  let res = '';
+  if (entier >= 1000) {
+    const mil = Math.floor(entier/1000);
+    const r   = entier%1000;
+    res = (mil===1?'mille':centaine(mil)+'-mille') + (r?'-'+centaine(r):'');
+  } else {
+    res = centaine(entier);
+  }
+  if (dec>0) res += ` et ${dizaine(dec)} centime${dec>1?'s':''}`;
+  return res.replace(/^./,c=>c.toUpperCase());
+}
+
+function fileToBase64(file) {
+  return new Promise((res,rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function fileChosen(inputId, pillId, nameVar) {
+  const file = document.getElementById(inputId).files[0];
+  if (!file) return;
+  const pill = document.getElementById(pillId);
+  pill.className = 'file-pill mt-8';
+  pill.innerHTML = `📎 ${file.name} <span class="file-pill-remove" onclick="removeFile('${inputId}','${pillId}')">✕</span>`;
+  // Store ref
+  if (inputId === 'upModeleInput') bailWizard.modeleFile = file;
+  if (inputId === 'upSepaModele')  sepaWizard.modeleFile = file;
+}
+
+function removeFile(inputId, pillId) {
+  document.getElementById(inputId).value = '';
+  document.getElementById(pillId).className = 'hidden';
+  if (inputId === 'upModeleInput') bailWizard.modeleFile = null;
+  if (inputId === 'upSepaModele')  sepaWizard.modeleFile = null;
+}
+
+function dragOver(e, zoneId) { e.preventDefault(); document.getElementById(zoneId).classList.add('drag'); }
+function dragLeave(zoneId)   { document.getElementById(zoneId).classList.remove('drag'); }
+function dropFile(e, inputId, zoneId) {
+  e.preventDefault();
+  dragLeave(zoneId);
+  const dt = e.dataTransfer;
+  if (dt.files[0]) {
+    const inp = document.getElementById(inputId);
+    const transfer = new DataTransfer();
+    transfer.items.add(dt.files[0]);
+    inp.files = transfer.files;
+    inp.dispatchEvent(new Event('change'));
+  }
+}
+
+function exportCSV(rows, filename) {
+  if (!rows.length) return;
+  const keys = Object.keys(rows[0]);
+  const csv  = [keys.join(';'), ...rows.map(r=>keys.map(k=>JSON.stringify(r[k]??'')).join(';'))].join('\n');
+  saveAs(new Blob([csv],{type:'text/csv;charset=utf-8'}), filename);
+}
+
+// ── MODAL ──
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m => {
+  m.addEventListener('click', e => { if (e.target===m) m.classList.remove('open'); });
+});
+// Sync role → maison field visibility in new user modal
+document.getElementById('newUserRole').addEventListener('change', function() {
+  document.getElementById('newUserMaisonField').style.display = this.value==='maison'?'block':'none';
+});
+
+// ── CONFIRM ──
+function confirm2(title, msg, cb) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent   = msg;
+  const btn = document.getElementById('confirmOkBtn');
+  btn.onclick = () => { closeModal('modalConfirm'); cb(); };
+  openModal('modalConfirm');
+}
+
+// ── LOADING ──
+function showLoading(msg='Traitement en cours…') {
+  document.getElementById('loadingMsg').textContent = msg;
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
+
+// ── TOAST ──
+let toastTimer;
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3500);
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+(function init() {
+  const s = sessionStorage.getItem('session');
+  if (s) {
+    try {
+      currentUser = JSON.parse(atob(s));
+      bootApp();
+    } catch(e) { sessionStorage.removeItem('session'); }
+  }
+})();
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Daddy'Baux</title>
+<title>DaddyBaux</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
@@ -116,8 +116,9 @@ code{background:var(--bg);border:1px solid var(--border);border-radius:4px;paddi
 <!-- LOGIN -->
 <div id="loginScreen">
   <div class="lcard">
-    <div class="llogo">Daddy'Baux</div>
+    <div class="llogo">DaddyBaux</div>
     <div class="lsub">Rédaction automatisée des baux de location</div>
+    <div style="text-align:center;font-size:.7rem;color:var(--muted);margin-bottom:24px;margin-top:-20px">v1.0</div>
     <div class="fg"><label>Identifiant</label><input id="liU" type="text" placeholder="Votre login" autocomplete="username"/></div>
     <div class="fg"><label>Mot de passe</label>
       <div class="pw-wrap"><input id="liP" type="password" placeholder="••••••••" autocomplete="current-password"/>
@@ -131,7 +132,7 @@ code{background:var(--bg);border:1px solid var(--border);border-radius:4px;paddi
 <!-- APP -->
 <div id="app" style="display:none">
   <header>
-    <div class="hlogo">🏠 Daddy'Baux</div>
+    <div class="hlogo">🏠 DaddyBaux</div>
     <select id="maisonSel" onchange="onMC()" style="display:none"></select>
     <div class="hsp"></div>
     <span class="huser" id="hUser"></span>
@@ -554,7 +555,12 @@ const DU=[
   {login:'MaisonDOU',  pw:'Henon59500!',role:'maison',    maison:'Douai',          display:'Douai'},
   {login:'MaisonCFD',  pw:'Henon63100!',role:'maison',    maison:'Clermont-Ferrand',display:'Clermont-Ferrand'},
 ];
-function getU(){try{return JSON.parse(atob(localStorage.getItem('db_users')||''));}catch(e){}localStorage.setItem('db_users',btoa(JSON.stringify(DU)));return DU;}
+function getU(){
+  const raw=localStorage.getItem('db_users');
+  if(raw){try{const u=JSON.parse(atob(raw));if(Array.isArray(u)&&u.length)return u;}catch(e){}}
+  localStorage.setItem('db_users',btoa(JSON.stringify(DU)));
+  return DU;
+}
 function saveU(u){localStorage.setItem('db_users',btoa(JSON.stringify(u)));}
 function getKey(){return localStorage.getItem('ak')||'';}
 

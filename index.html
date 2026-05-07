@@ -1000,7 +1000,7 @@ async function ldAdmin(){
   const ub=document.getElementById('adUsers');
   const users=getU();
   ub.innerHTML=`<div class="tw"><table><thead><tr><th>Login</th><th>Rôle</th><th>Maison</th><th></th></tr></thead><tbody>${
-    users.map((u,i)=>`<tr><td><strong>${u.login}</strong></td><td><span class="bdg ${u.role==='admin'?'bdg':'u.role==='operations'?'bdg2':'bdg3'}">${u.role}</span></td><td>${u.maison||'—'}</td><td><button class="btn bd" onclick="delU(${i})">🗑️</button></td></tr>`).join('')
+    users.map((u,i)=>{const rc=u.role==='admin'?'bdg':'bdg2';return `<tr><td><strong>${u.login}</strong></td><td><span class="bdg ${rc}">${u.role}</span></td><td>${u.maison||'—'}</td><td><button class="btn bd" onclick="delU(${i})">🗑️</button></td></tr>`;}).join('')
   }</tbody></table></div>`;
 
   const q=new Date();q.setMonth(q.getMonth()-3);

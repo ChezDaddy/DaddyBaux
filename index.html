@@ -655,9 +655,11 @@ function getUsers() {
   if (raw && raw.length > 2) {
     try {
       const parsed = JSON.parse(atob(raw));
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      // Si les users n'ont pas pwh (ancien format avec pw en clair) → reset
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].pwh) return parsed;
     } catch(e) { /* fallback */ }
   }
+  // Reset : écrire les DEFAULT_USERS avec pwh
   safeStorage(function(){ localStorage.setItem('db_users', btoa(JSON.stringify(DEFAULT_USERS))); }, null);
   return DEFAULT_USERS;
 }
@@ -736,6 +738,9 @@ function startApp() {
 
   // Créer les buckets en arrière-plan
   ensureBuckets();
+
+  // Ping Supabase toutes les 4 jours pour éviter la mise en pause
+  keepSupabaseAwake();
 
   updKeyStatus();
 }
@@ -859,6 +864,14 @@ function ensureBuckets() {
       body: JSON.stringify({id:n, name:n, public:false})
     }).catch(function() {});
   });
+}
+
+/* Ping Supabase toutes les 4 jours pour éviter la mise en pause (plan gratuit = pause après 7j) */
+function keepSupabaseAwake() {
+  sbQ('maisons?select=id&limit=1').catch(function() {});
+  setInterval(function() {
+    sbQ('maisons?select=id&limit=1').catch(function() {});
+  }, 4 * 24 * 60 * 60 * 1000); // toutes les 4 jours
 }
 
 /* ── DASHBOARD ── */

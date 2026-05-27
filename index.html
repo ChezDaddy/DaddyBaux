@@ -643,19 +643,22 @@ let bw = {step:1, modPath:null, pdfFile:null, data:{}, opt:1, genBlob:null};
 let sw = {step:1, modPath:null, pdfFile:null, data:{}, genBlob:null};
 
 /* ── USERS ── */
+function safeStorage(fn, fallback) {
+  try { return fn(); } catch(e) { return fallback; }
+}
 function getUsers() {
-  const raw = localStorage.getItem('db_users');
+  const raw = safeStorage(function(){ return localStorage.getItem('db_users'); }, null);
   if (raw && raw.length > 2) {
     try {
       const parsed = JSON.parse(atob(raw));
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     } catch(e) { /* fallback */ }
   }
-  localStorage.setItem('db_users', btoa(JSON.stringify(DEFAULT_USERS)));
+  safeStorage(function(){ localStorage.setItem('db_users', btoa(JSON.stringify(DEFAULT_USERS))); }, null);
   return DEFAULT_USERS;
 }
-function saveUsers(u) { localStorage.setItem('db_users', btoa(JSON.stringify(u))); }
-function getApiKey() { return localStorage.getItem('ak') || ''; }
+function saveUsers(u) { safeStorage(function(){ localStorage.setItem('db_users', btoa(JSON.stringify(u))); }, null); }
+function getApiKey() { return safeStorage(function(){ return localStorage.getItem('ak'); }, '') || ''; }
 
 /* ── AUTH ── */
 function doLogin() {
@@ -680,7 +683,7 @@ function doLogin() {
     return;
   }
 
-  try { sessionStorage.setItem('sess', btoa(JSON.stringify(u))); } catch(e) {}
+  safeStorage(function(){ sessionStorage.setItem('sess', btoa(JSON.stringify(u))); }, null);
   CU = u;
   startApp();
 }
@@ -1685,13 +1688,13 @@ function toast(msg, type) {
 // Reprendre la session si déjà connecté
 (function() {
   try {
-    var s = sessionStorage.getItem('sess');
+    var s = safeStorage(function(){ return sessionStorage.getItem('sess'); }, null);
     if (s) {
       var u = JSON.parse(atob(s));
       if (u && u.login) { CU = u; startApp(); }
     }
   } catch(e) {
-    sessionStorage.removeItem('sess');
+    safeStorage(function(){ sessionStorage.removeItem('sess'); }, null);
   }
 })();
 </script>

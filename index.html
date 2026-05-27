@@ -708,56 +708,6 @@ function toggleEye() {
   }
 }
 
-/* ── EXPOSE sur window (fix onclick inline GitHub Pages / strict mode) ── */
-window.doLogin       = doLogin;
-window.doLogout      = doLogout;
-window.toggleEye     = toggleEye;
-window.onMS          = onMS;
-window.gp            = gp;
-window.gpName        = gpName;
-window.loadBaux      = loadBaux;
-window.delBail       = delBail;
-window.bN1           = bN1;
-window.bN2           = bN2;
-window.bN3           = bN3;
-window.bGs           = bGs;
-window.setPdf        = setPdf;
-window.selOpt        = selOpt;
-window.tglG          = tglG;
-window.saveDraft     = saveDraft;
-window.dlBail        = dlBail;
-window.initSepa      = initSepa;
-window.sN1           = sN1;
-window.sN2           = sN2;
-window.sN3           = sN3;
-window.sGs           = sGs;
-window.setRib        = setRib;
-window.dlSepa        = dlSepa;
-window.resetSepa     = resetSepa;
-window.loadHisto     = loadHisto;
-window.openMod       = openMod;
-window.closeMod      = closeMod;
-window.openUploadMod = openUploadMod;
-window.showUpPill    = showUpPill;
-window.doUpload      = doUpload;
-window.saveKey       = saveKey;
-window.crMaison      = crMaison;
-window.crUser        = crUser;
-window.delUser       = delUser;
-window.resetPw       = resetPw;
-window.doPurge       = doPurge;
-window.dlSb          = dlSb;
-window.dov           = dov;
-window.dlv           = dlv;
-window.drp           = drp;
-
-/* ── BINDINGS CLAVIER ── */
-document.getElementById('liP').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') doLogin();
-});
-document.getElementById('liU').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') doLogin();
-});
 
 /* ── APP START ── */
 function startApp() {
@@ -1726,6 +1676,57 @@ function toast(msg, type) {
   clearTimeout(_tt);
   _tt = setTimeout(function() { el.className = ''; }, 3500);
 }
+
+/* ── EXPOSE sur window (fix onclick inline GitHub Pages / strict mode) ── */
+window.doLogin       = doLogin;
+window.doLogout      = doLogout;
+window.toggleEye     = toggleEye;
+window.onMS          = onMS;
+window.gp            = gp;
+window.gpName        = gpName;
+window.loadBaux      = loadBaux;
+window.delBail       = delBail;
+window.bN1           = bN1;
+window.bN2           = bN2;
+window.bN3           = bN3;
+window.bGs           = bGs;
+window.setPdf        = setPdf;
+window.selOpt        = selOpt;
+window.tglG          = tglG;
+window.saveDraft     = saveDraft;
+window.dlBail        = dlBail;
+window.initSepa      = initSepa;
+window.sN1           = sN1;
+window.sN2           = sN2;
+window.sN3           = sN3;
+window.sGs           = sGs;
+window.setRib        = setRib;
+window.dlSepa        = dlSepa;
+window.resetSepa     = resetSepa;
+window.loadHisto     = loadHisto;
+window.openMod       = openMod;
+window.closeMod      = closeMod;
+window.openUploadMod = openUploadMod;
+window.showUpPill    = showUpPill;
+window.doUpload      = doUpload;
+window.saveKey       = saveKey;
+window.crMaison      = crMaison;
+window.crUser        = crUser;
+window.delUser       = delUser;
+window.resetPw       = resetPw;
+window.doPurge       = doPurge;
+window.dlSb          = dlSb;
+window.dov           = dov;
+window.dlv           = dlv;
+window.drp           = drp;
+
+/* ── BINDINGS CLAVIER ── */
+document.getElementById('liP').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('liU').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doLogin();
+});
 
 /* ── INIT ── */
 // Purger un localStorage corrompu (évite le blocage login)

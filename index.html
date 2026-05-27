@@ -721,20 +721,15 @@ function startApp() {
     document.getElementById('niAdmin').classList.remove('hide');
   }
 
-  // Init maisons (fallback local, pas de await bloquant)
-  allM = [
-    {id:'aut', nom:'Autun',            ville:'Autun',            couleur:'#d3692D'},
-    {id:'lmd', nom:'La Madeleine',     ville:'La Madeleine',     couleur:'#8CADA1'},
-    {id:'dou', nom:'Douai',            ville:'Douai',            couleur:'#d3692D'},
-    {id:'cfd', nom:'Clermont-Ferrand', ville:'Clermont-Ferrand', couleur:'#E59E00'},
-  ];
+  // Init maisons depuis Supabase
+  allM = [];
   buildMaisonSel();
   gpName('dash');
 
-  // Charger les maisons depuis Supabase en arrière-plan (sans bloquer)
+  // Charger les maisons depuis Supabase
   sbQ('maisons?select=*&order=nom').then(function(rows) {
     if (rows && rows.length) { allM = rows; buildMaisonSel(); }
-  }).catch(function() { /* garde le fallback local */ });
+  }).catch(function() {});
 
   // Créer les buckets en arrière-plan
   ensureBuckets();
@@ -857,13 +852,9 @@ async function sbDown(bucket, path) {
 }
 
 function ensureBuckets() {
-  ['modeles','dossiers','baux-generes'].forEach(function(n) {
-    fetch(SB_URL + '/storage/v1/bucket', {
-      method: 'POST',
-      headers: {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},
-      body: JSON.stringify({id:n, name:n, public:false})
-    }).catch(function() {});
-  });
+  // Les buckets sont créés manuellement dans Supabase Dashboard → Storage
+  // Buckets requis : modeles, baux-generes
+  // Cette fonction ne fait rien côté client (anon key sans droits admin storage)
 }
 
 /* Ping Supabase toutes les 4 jours pour éviter la mise en pause (plan gratuit = pause après 7j) */
@@ -1428,33 +1419,38 @@ async function loadAdmin() {
   const mb = document.getElementById('adMaisons');
   mb.innerHTML = '<div class="spin" style="margin:20px auto"></div>';
   try {
-    const maisons = await sbQ('maisons?select=*&order=nom').catch(function(){return null;}) || allM;
-    let html = '<div class="tw"><table>' +
-      '<thead><tr><th>Maison</th><th>Ville</th><th>Login</th><th>Couleur</th><th>Modèle bail</th><th>Modèle SEPA</th><th>Actions</th></tr></thead>' +
-      '<tbody id="maisonsRows"></tbody></table></div>';
-    mb.innerHTML = html;
-    const tbody = document.getElementById('maisonsRows');
-    for (let i = 0; i < maisons.length; i++) {
-      const m = maisons[i];
-      const bail = await sbQ('modeles?select=nom,version,created_at&type_doc=eq.bail&maison_id=eq.' + m.id + '&order=created_at.desc&limit=1').catch(function(){return [];});
-      const sepa = await sbQ('modeles?select=nom,version,created_at&type_doc=eq.sepa&maison_id=eq.' + m.id + '&order=created_at.desc&limit=1').catch(function(){return [];});
-      const bM = bail && bail[0];
-      const sM = sepa && sepa[0];
-      const bBadge = bM ? '<span class="mbdg ok">✅ ' + bM.nom + ' v' + (bM.version||1) + '</span>' : '<span class="mbdg">⚠️ Aucun</span>';
-      const sBadge = sM ? '<span class="mbdg ok">✅ ' + sM.nom + ' v' + (sM.version||1) + '</span>' : '<span class="mbdg">⚠️ Aucun</span>';
-      const tr = document.createElement('tr');
-      tr.innerHTML = '<td><strong>' + m.nom + '</strong></td>' +
-        '<td>' + (m.ville||'—') + '</td>' +
-        '<td><code>' + (m.login||'—') + '</code></td>' +
-        '<td><span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:' + (m.couleur||'#ccc') + ';border:1px solid var(--brd)"></span></td>' +
-        '<td>' + bBadge + '</td><td>' + sBadge + '</td>' +
-        '<td class="flex gap8">' +
-        '<button class="btn bp" onclick="openUploadMod(\'' + m.id + '\',\'' + m.nom + '\')">📄 Modèle</button>' +
-        '<button class="btn bs" onclick="resetPw(\'' + m.id + '\',\'' + m.nom + '\')">🔑</button>' +
-        '</td>';
-      tbody.appendChild(tr);
+    const maisons = await sbQ('maisons?select=*&order=nom');
+
+    if (!maisons || maisons.length === 0) {
+      mb.innerHTML = '<div class="al al-w">⚠️ Aucune maison dans Supabase. Exécutez le SQL d\'initialisation des maisons (voir documentation).</div>';
+    } else {
+      let html = '<div class="tw"><table>' +
+        '<thead><tr><th>Maison</th><th>Ville</th><th>Login</th><th>Couleur</th><th>Modèle bail</th><th>Modèle SEPA</th><th>Actions</th></tr></thead>' +
+        '<tbody id="maisonsRows"></tbody></table></div>';
+      mb.innerHTML = html;
+      const tbody = document.getElementById('maisonsRows');
+      for (let i = 0; i < maisons.length; i++) {
+        const m = maisons[i];
+        const bail = await sbQ('modeles?select=nom,version,created_at&type_doc=eq.bail&maison_id=eq.' + m.id + '&order=created_at.desc&limit=1').catch(function(){return [];});
+        const sepa = await sbQ('modeles?select=nom,version,created_at&type_doc=eq.sepa&maison_id=eq.' + m.id + '&order=created_at.desc&limit=1').catch(function(){return [];});
+        const bM = bail && bail[0];
+        const sM = sepa && sepa[0];
+        const bBadge = bM ? '<span class="mbdg ok">✅ ' + bM.nom + ' v' + (bM.version||1) + '</span>' : '<span class="mbdg">⚠️ Aucun</span>';
+        const sBadge = sM ? '<span class="mbdg ok">✅ ' + sM.nom + ' v' + (sM.version||1) + '</span>' : '<span class="mbdg">⚠️ Aucun</span>';
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td><strong>' + m.nom + '</strong></td>' +
+          '<td>' + (m.ville||'—') + '</td>' +
+          '<td><code>' + (m.login||'—') + '</code></td>' +
+          '<td><span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:' + (m.couleur||'#ccc') + ';border:1px solid var(--brd)"></span></td>' +
+          '<td>' + bBadge + '</td><td>' + sBadge + '</td>' +
+          '<td class="flex gap8">' +
+          '<button class="btn bp" onclick="openUploadMod(\'' + m.id + '\',\'' + m.nom + '\')">📄 Modèle</button>' +
+          '<button class="btn bs" onclick="resetPw(\'' + m.id + '\',\'' + m.nom + '\')">🔑</button>' +
+          '</td>';
+        tbody.appendChild(tr);
+      }
     }
-  } catch(e) { mb.innerHTML = '<p class="mut sm">Erreur: ' + e.message + '</p>'; }
+  } catch(e) { mb.innerHTML = '<p class="mut sm">Erreur chargement maisons: ' + e.message + '</p>'; }
 
   // Utilisateurs
   const ub    = document.getElementById('adUsers');
@@ -1493,6 +1489,15 @@ function showUpPill(inp) {
   p.innerHTML = '📎 ' + f.name;
 }
 
+async function createBucketIfNeeded(name) {
+  // Tenter de créer le bucket (ignore l'erreur s'il existe déjà)
+  await fetch(SB_URL + '/storage/v1/bucket', {
+    method: 'POST',
+    headers: {'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json'},
+    body: JSON.stringify({id:name, name:name, public:false})
+  }).catch(function(){});
+}
+
 async function doUpload() {
   const file = document.getElementById('mUpF').files[0];
   const type = document.getElementById('mUpT').value;
@@ -1500,12 +1505,28 @@ async function doUpload() {
   if (!upMaisonId)  { toast('Aucune maison sélectionnée', 'err'); return; }
   showLd('Téléversement…');
   try {
+    // Créer le bucket si nécessaire
+    await createBucketIfNeeded('modeles');
+
     const ex = await sbQ('modeles?select=id&type_doc=eq.' + type + '&maison_id=eq.' + upMaisonId).catch(function(){return [];});
     const v  = (ex ? ex.length : 0) + 1;
     const path = type + '/' + upMaisonId + '/' + Date.now() + '_' + file.name;
-    await sbUp('modeles', path, file);
+
+    // Upload avec upsert (PUT si POST échoue)
+    const hdrs = {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'x-upsert': 'true'
+    };
+    let res = await fetch(SB_URL + '/storage/v1/object/modeles/' + path, {method:'POST', headers:hdrs, body:file});
+    if (!res.ok) {
+      res = await fetch(SB_URL + '/storage/v1/object/modeles/' + path, {method:'PUT', headers:hdrs, body:file});
+      if (!res.ok) throw new Error('Upload échoué (' + res.status + '): ' + await res.text());
+    }
+
     await sbQ('modeles', {method:'POST', body:{nom:file.name.replace('.docx',''), type_doc:type, maison_id:upMaisonId, storage_path:path, version:v}});
-    hideLoad(); closeMod('mUpM'); toast('Modèle téléversé', 'ok'); loadAdmin();
+    hideLoad(); closeMod('mUpM'); toast('Modèle téléversé ✅', 'ok'); loadAdmin();
   } catch(e) { hideLoad(); toast('Erreur: ' + e.message, 'err'); }
 }
 

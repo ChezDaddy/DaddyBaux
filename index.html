@@ -42,6 +42,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--txt);font-size:14px;
 
 /* APP */
 #appWrap{flex-direction:column;min-height:100vh}
+.hidden{display:none!important}
 
 /* HEADER */
 .hdr{background:var(--mc);color:#fff;display:flex;align-items:center;gap:16px;padding:0 24px;height:56px;position:sticky;top:0;z-index:100;transition:background .4s;box-shadow:var(--sh)}
@@ -212,7 +213,7 @@ code{background:var(--bg);border:1px solid var(--brd);border-radius:4px;padding:
 </div>
 
 <!-- ═══ APP ═══ -->
-<div id="appWrap" style="display:none">
+<div id="appWrap" class="hidden">
   <div class="hdr" id="hdr">
     <div class="hlogo">🏠 DaddyBaux</div>
     <select id="mSel" onchange="onMS()"></select>
@@ -710,9 +711,8 @@ document.getElementById('liU').addEventListener('keydown', function(e) {
 
 /* ── APP START ── */
 function startApp() {
-  document.getElementById('loginWrap').style.setProperty('display','none','important');
-  var aw = document.getElementById('appWrap');
-  aw.style.setProperty('display','flex','important');
+  document.getElementById('loginWrap').classList.add('hidden');
+  document.getElementById('appWrap').classList.remove('hidden');
   document.getElementById('hUser').textContent = CU.display + ' · ' + CU.role;
 
   if (CU.role === 'admin') {

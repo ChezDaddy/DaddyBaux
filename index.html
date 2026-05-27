@@ -590,8 +590,6 @@ code{background:var(--bg);border:1px solid var(--brd);border-radius:4px;padding:
 
 <!-- ═══ SCRIPT ═══ -->
 <script>
-"use strict";
-
 /* ── CONFIG ── */
 const SB_URL = 'https://cafkamkmwupkehvbcmli.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhZmthbWttd3Vwa2VodmJjbWxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjc1NjMsImV4cCI6MjA5Mjk0MzU2M30.JAnyxpKZ87vfIfPet4vnSiWKY6OKDCNADdKUvxcBnB8';
@@ -623,14 +621,20 @@ const BAIL_FIELDS = [
 ];
 
 /* ── UTILISATEURS PAR DÉFAUT ── */
+/* Mots de passe stockés en hash SHA-256 uniquement */
+async function hashPw(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+}
+
 const DEFAULT_USERS = [
-  {login:'Finance',    pw:'Henon63122!', role:'admin',      maison:null,              display:'Administrateur'},
-  {login:'Arnaud',     pw:'Henon69004!', role:'operations', maison:null,              display:'Dirigeant'},
-  {login:'Operations', pw:'Henon69004!', role:'operations', maison:null,              display:'Opérations'},
-  {login:'MaisonAUT',  pw:'Henon71400!', role:'maison',     maison:'Autun',           display:'Autun'},
-  {login:'MaisonLMD',  pw:'Henon59110!', role:'maison',     maison:'La Madeleine',    display:'La Madeleine'},
-  {login:'MaisonDOU',  pw:'Henon59500!', role:'maison',     maison:'Douai',           display:'Douai'},
-  {login:'MaisonCFD',  pw:'Henon63100!', role:'maison',     maison:'Clermont-Ferrand',display:'Clermont-Ferrand'},
+  {login:'Finance',    pwh:'ce8469382632fecabcf9740ef2b1eb0579807e63895b196c5088491ba11ecae1', role:'admin',      maison:null,              display:'Administrateur'},
+  {login:'Arnaud',     pwh:'012e950adc5ab76e08359a2652346c78119b2fec21f366af07fb8252639f130c', role:'operations', maison:null,              display:'Dirigeant'},
+  {login:'Operations', pwh:'012e950adc5ab76e08359a2652346c78119b2fec21f366af07fb8252639f130c', role:'operations', maison:null,              display:'Opérations'},
+  {login:'MaisonAUT',  pwh:'975faad60ec28a9ecab8e3dbcbcf66e66f26d5eb0e5b3b21107614e6fdf86a16', role:'maison',     maison:'Autun',           display:'Autun'},
+  {login:'MaisonLMD',  pwh:'71d32105ba1c2b76a5beb51db4dbe67163b6191cdccaf2fe7c9d99806eed9c2f', role:'maison',     maison:'La Madeleine',    display:'La Madeleine'},
+  {login:'MaisonDOU',  pwh:'d33c33293e421d9af07b4d48377a9e39b88024ac8f67d300cd4726b95906c3a5', role:'maison',     maison:'Douai',           display:'Douai'},
+  {login:'MaisonCFD',  pwh:'c709625ae9569c2142f680d709a77197eef0dfb14386fec16b655ae3cd9fa969', role:'maison',     maison:'Clermont-Ferrand',display:'Clermont-Ferrand'},
 ];
 
 /* ── STATE ── */
@@ -661,7 +665,7 @@ function saveUsers(u) { safeStorage(function(){ localStorage.setItem('db_users',
 function getApiKey() { return safeStorage(function(){ return localStorage.getItem('ak'); }, '') || ''; }
 
 /* ── AUTH ── */
-function doLogin() {
+async function doLogin() {
   const login = document.getElementById('liU').value.trim();
   const pw    = document.getElementById('liP').value;
   document.getElementById('lerr').style.display = 'none';
@@ -672,14 +676,13 @@ function doLogin() {
     return;
   }
 
+  const pwh   = await hashPw(pw);
   const users = getUsers();
-  console.log('[DaddyBaux] doLogin: login="'+login+'", users count='+users.length+', logins='+users.map(function(u){return u.login;}).join(','));
-  const u = users.find(function(x) { return x.login === login && x.pw === pw; });
-  console.log('[DaddyBaux] user found:', u ? u.display : 'NOT FOUND');
+  const u     = users.find(function(x) { return x.login === login && x.pwh === pwh; });
 
   if (!u) {
     document.getElementById('lerr').style.display = 'block';
-    document.getElementById('lerr').textContent = 'Identifiant ou mot de passe incorrect. ('+users.length+' utilisateurs chargés)';
+    document.getElementById('lerr').textContent = 'Identifiant ou mot de passe incorrect.';
     return;
   }
 
@@ -705,6 +708,50 @@ function toggleEye() {
   }
 }
 
+/* ── EXPOSE sur window (fix onclick inline GitHub Pages / strict mode) ── */
+window.doLogin       = doLogin;
+window.doLogout      = doLogout;
+window.toggleEye     = toggleEye;
+window.onMS          = onMS;
+window.gp            = gp;
+window.gpName        = gpName;
+window.loadBaux      = loadBaux;
+window.delBail       = delBail;
+window.bN1           = bN1;
+window.bN2           = bN2;
+window.bN3           = bN3;
+window.bGs           = bGs;
+window.setPdf        = setPdf;
+window.selOpt        = selOpt;
+window.tglG          = tglG;
+window.saveDraft     = saveDraft;
+window.dlBail        = dlBail;
+window.initSepa      = initSepa;
+window.sN1           = sN1;
+window.sN2           = sN2;
+window.sN3           = sN3;
+window.sGs           = sGs;
+window.setRib        = setRib;
+window.dlSepa        = dlSepa;
+window.resetSepa     = resetSepa;
+window.loadHisto     = loadHisto;
+window.openMod       = openMod;
+window.closeMod      = closeMod;
+window.openUploadMod = openUploadMod;
+window.showUpPill    = showUpPill;
+window.doUpload      = doUpload;
+window.saveKey       = saveKey;
+window.crMaison      = crMaison;
+window.crUser        = crUser;
+window.delUser       = delUser;
+window.resetPw       = resetPw;
+window.doPurge       = doPurge;
+window.dlSb          = dlSb;
+window.dov           = dov;
+window.dlv           = dlv;
+window.drp           = drp;
+
+/* ── BINDINGS CLAVIER ── */
 document.getElementById('liP').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') doLogin();
 });
@@ -1526,10 +1573,12 @@ function crMaison() {
   sbQ('maisons', {method:'POST', body:{nom:nom, ville:vil, adresse:adr, login:lg, password_hash:btoa(pw), couleur:col}})
     .then(function() {
       const u = getUsers();
-      u.push({login:lg, pw:pw, role:'maison', maison:nom, display:nom});
-      saveUsers(u);
-      closeMod('mNM'); toast('Maison créée', 'ok');
-      sbQ('maisons?select=*&order=nom').then(function(rows){ if(rows&&rows.length){allM=rows;buildMaisonSel();} loadAdmin(); }).catch(function(){loadAdmin();});
+      hashPw(pw).then(function(pwh){
+        u.push({login:lg, pwh:pwh, role:'maison', maison:nom, display:nom});
+        saveUsers(u);
+        closeMod('mNM'); toast('Maison créée', 'ok');
+        sbQ('maisons?select=*&order=nom').then(function(rows){ if(rows&&rows.length){allM=rows;buildMaisonSel();} loadAdmin(); }).catch(function(){loadAdmin();});
+      });
     }).catch(function(e) { toast('Erreur: ' + e.message, 'err'); });
 }
 
@@ -1541,8 +1590,11 @@ function crUser() {
   const maison= allM.find(function(m){return m.id==mId;});
   if (!lg || !pw) { toast('Login et mot de passe requis', 'err'); return; }
   const u = getUsers();
-  u.push({login:lg, pw:pw, role:role, maison:maison?maison.nom:null, display:lg});
-  saveUsers(u); closeMod('mNU'); toast('Utilisateur créé', 'ok'); loadAdmin();
+  hashPw(pw).then(function(pwh) {
+    u.push({login:lg, pwh:pwh, role:role, maison:maison?maison.nom:null, display:lg});
+    saveUsers(u); closeMod('mNU'); toast('Utilisateur créé', 'ok'); loadAdmin();
+  });
+  return;
 }
 
 function delUser(i) {

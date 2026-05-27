@@ -41,7 +41,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--txt);font-size:14px;
 .lerr{color:var(--red);font-size:.82rem;margin-top:10px;text-align:center;display:none}
 
 /* APP */
-#appWrap{display:none;flex-direction:column;min-height:100vh}
+#appWrap{flex-direction:column;min-height:100vh}
 
 /* HEADER */
 .hdr{background:var(--mc);color:#fff;display:flex;align-items:center;gap:16px;padding:0 24px;height:56px;position:sticky;top:0;z-index:100;transition:background .4s;box-shadow:var(--sh)}
@@ -212,7 +212,7 @@ code{background:var(--bg);border:1px solid var(--brd);border-radius:4px;padding:
 </div>
 
 <!-- ═══ APP ═══ -->
-<div id="appWrap">
+<div id="appWrap" style="display:none">
   <div class="hdr" id="hdr">
     <div class="hlogo">🏠 DaddyBaux</div>
     <select id="mSel" onchange="onMS()"></select>
@@ -669,11 +669,13 @@ function doLogin() {
   }
 
   const users = getUsers();
+  console.log('[DaddyBaux] doLogin: login="'+login+'", users count='+users.length+', logins='+users.map(function(u){return u.login;}).join(','));
   const u = users.find(function(x) { return x.login === login && x.pw === pw; });
+  console.log('[DaddyBaux] user found:', u ? u.display : 'NOT FOUND');
 
   if (!u) {
     document.getElementById('lerr').style.display = 'block';
-    document.getElementById('lerr').textContent = 'Identifiant ou mot de passe incorrect.';
+    document.getElementById('lerr').textContent = 'Identifiant ou mot de passe incorrect. ('+users.length+' utilisateurs chargés)';
     return;
   }
 
@@ -708,8 +710,9 @@ document.getElementById('liU').addEventListener('keydown', function(e) {
 
 /* ── APP START ── */
 function startApp() {
-  document.getElementById('loginWrap').style.display = 'none';
-  document.getElementById('appWrap').style.display = 'flex';
+  document.getElementById('loginWrap').style.setProperty('display','none','important');
+  var aw = document.getElementById('appWrap');
+  aw.style.setProperty('display','flex','important');
   document.getElementById('hUser').textContent = CU.display + ' · ' + CU.role;
 
   if (CU.role === 'admin') {
@@ -1669,12 +1672,22 @@ function toast(msg, type) {
   _tt = setTimeout(function() { el.className = ''; }, 3500);
 }
 
-/* ── INIT : vérifier session existante ── */
+/* ── INIT ── */
+// Purger un localStorage corrompu (évite le blocage login)
+(function() {
+  var raw = localStorage.getItem('db_users');
+  if (raw) {
+    try { JSON.parse(atob(raw)); }
+    catch(e) { localStorage.removeItem('db_users'); console.warn('db_users corrompu, réinitialisé'); }
+  }
+})();
+
+// Reprendre la session si déjà connecté
 (function() {
   try {
-    const s = sessionStorage.getItem('sess');
+    var s = sessionStorage.getItem('sess');
     if (s) {
-      const u = JSON.parse(atob(s));
+      var u = JSON.parse(atob(s));
       if (u && u.login) { CU = u; startApp(); }
     }
   } catch(e) {

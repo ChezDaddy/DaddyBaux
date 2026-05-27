@@ -375,6 +375,9 @@ code{background:var(--bg);border:1px solid var(--brd);border-radius:4px;padding:
           <div style="font-size:3rem;margin-bottom:12px">🎉</div>
           <div class="ptit mb8">Bail généré avec succès</div>
           <p class="mut mb14">Le bail est archivé dans l'historique.</p>
+          <div style="background:var(--bg);border:1.5px solid var(--brd);border-radius:8px;padding:10px 18px;display:inline-block;margin-bottom:14px">
+            <span class="sm mut">Référence bail : </span><strong id="codeBailAff" style="color:var(--mc);font-size:1.1rem;letter-spacing:1px">—</strong>
+          </div><br/>
           <button class="btn bp blg" onclick="dlBail()">⬇️ Télécharger le DOCX</button>
           <div class="mt16 flex gap8" style="justify-content:center">
             <button class="btn bs" onclick="gpName('histo')">Voir l'historique</button>
@@ -431,6 +434,7 @@ code{background:var(--bg);border:1px solid var(--brd);border-radius:4px;padding:
               <div class="ef"><label>Banque</label><input id="sBanq" type="text"/></div>
               <div class="ef"><label>Locataire (prénom nom)</label><input id="sLoc" type="text"/></div>
               <div class="ef"><label>Adresse locataire</label><input id="sAdr" type="text"/></div>
+              <div class="ef"><label>N° appartement</label><input id="sAppt" type="text" placeholder="ex: 301"/></div>
             </div>
           </div>
           <div class="flex gap8 jb mt8">
@@ -442,6 +446,9 @@ code{background:var(--bg);border:1px solid var(--brd);border-radius:4px;padding:
           <div class="card tc">
             <div style="font-size:3rem;margin-bottom:12px">🎉</div>
             <div class="ptit mb8">Mandat SEPA généré</div>
+            <div style="background:var(--bg);border:1.5px solid var(--brd);border-radius:8px;padding:10px 18px;display:inline-block;margin-bottom:14px">
+              <span class="sm mut">Référence SEPA : </span><strong id="codeSepaAff" style="color:var(--mc);font-size:1.1rem;letter-spacing:1px">—</strong>
+            </div><br/>
             <button class="btn bp blg" onclick="dlSepa()">⬇️ Télécharger le DOCX</button>
             <div class="mt16"><button class="btn bs" onclick="resetSepa()">Nouveau mandat</button></div>
           </div>
@@ -537,6 +544,7 @@ code{background:var(--bg);border:1px solid var(--brd);border-radius:4px;padding:
   <div class="mbox">
     <h3>📄 Modèle — <span id="mUpMN"></span></h3>
     <div class="al al-w">Remplace le modèle actif de la maison.</div>
+    <div id="mUpErr" class="al al-w" style="display:none"></div>
     <div class="fld"><label>Type de modèle</label>
       <select id="mUpT"><option value="bail">Bail de location</option><option value="sepa">Mandat SEPA</option></select>
     </div>
@@ -593,6 +601,14 @@ code{background:var(--bg);border:1px solid var(--brd);border-radius:4px;padding:
 /* ── CONFIG ── */
 const SB_URL = 'https://cafkamkmwupkehvbcmli.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhZmthbWttd3Vwa2VodmJjbWxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjc1NjMsImV4cCI6MjA5Mjk0MzU2M30.JAnyxpKZ87vfIfPet4vnSiWKY6OKDCNADdKUvxcBnB8';
+
+/* Codes maison pour génération identifiants */
+const MAISON_CODES = {
+  'Autun':            'AUT',
+  'La Madeleine':     'LMD',
+  'Douai':            'DOU',
+  'Clermont-Ferrand': 'CFD',
+};
 
 /* ── PLACEHOLDERS exacts du bail Daddy ── */
 const BAIL_FIELDS = [
@@ -665,6 +681,45 @@ function getUsers() {
 }
 function saveUsers(u) { safeStorage(function(){ localStorage.setItem('db_users', btoa(JSON.stringify(u))); }, null); }
 function getApiKey() { return safeStorage(function(){ return localStorage.getItem('ak'); }, '') || ''; }
+
+
+/* ── GÉNÉRATION CODES BAIL & SEPA ── */
+
+function getMaisonCode(maisonNom) {
+  return MAISON_CODES[maisonNom] || maisonNom.slice(0,3).toUpperCase();
+}
+
+// Code Bail : AAAAMMCCCxxx
+async function genCodeBail(maisonId, maisonNom, dateSig) {
+  // Extraire AAAA et MM depuis la date de signature (JJ/MM/AAAA)
+  var now = new Date();
+  var annee = now.getFullYear().toString();
+  var mois  = String(now.getMonth() + 1).padStart(2, '0');
+  if (dateSig) {
+    var parts = dateSig.split('/');
+    if (parts.length === 3) { mois = parts[1]; annee = parts[2]; }
+  }
+  var ccc = getMaisonCode(maisonNom);
+  // Compter les baux existants pour cette maison sur cette année+mois
+  var prefix = annee + mois + ccc;
+  var existing = await sbQ('baux?select=code_bail&maison_id=eq.' + maisonId + '&code_bail=like.' + prefix + '*').catch(function(){return [];});
+  var rang = String((existing ? existing.length : 0) + 1).padStart(3, '0');
+  return prefix + rang;
+}
+
+// Code SEPA : CCCyyyABCz
+async function genCodeSepa(maisonId, maisonNom, numAppt, nomLocataire) {
+  var ccc  = getMaisonCode(maisonNom);
+  var yyy  = String(numAppt || '000').padStart(3, '0');
+  // 3 premières lettres du nom de famille (premier mot = nom)
+  var nom  = (nomLocataire || '').toUpperCase().replace(/[^A-Z]/g, '');
+  var abc  = nom.slice(0, 3).padEnd(3, 'X');
+  var baseCode = ccc + yyy + abc;
+  // Chercher les mandats existants avec ce même préfixe pour calculer z
+  var existing = await sbQ('mandats_sepa?select=code_sepa&maison_id=eq.' + maisonId + '&code_sepa=like.' + baseCode + '*').catch(function(){return [];});
+  var z = (existing ? existing.length : 0) + 1;
+  return baseCode + z;
+}
 
 /* ── AUTH ── */
 async function doLogin() {
@@ -1101,7 +1156,10 @@ async function bN3() {
 
     const fname = 'bail_' + (d.locataire_nom||'locataire').replace(/\s+/g,'_') + '_' + Date.now() + '.docx';
     await sbUp('baux-generes', fname, docx).catch(function() {});
+    var codeBail = await genCodeBail(CM ? CM.id : null, CM ? CM.nom : '', d.date_signature);
+    bw.codeBail = codeBail;
     await sbQ('baux', {method:'POST', body:{
+      code_bail:     codeBail,
       locataire_nom: d.locataire_nom || '',
       maison_id:     CM ? CM.id : null,
       montant_loyer: parseFloat(d.montant_loyer) || null,
@@ -1113,6 +1171,7 @@ async function bN3() {
 
     hideLoad();
     bGs(4);
+    document.getElementById('codeBailAff').textContent = codeBail;
     toast('Bail généré avec succès !', 'ok');
   } catch(e) {
     hideLoad();
@@ -1351,8 +1410,10 @@ async function sN3() {
     banque:       document.getElementById('sBanq').value,
     locataire:    document.getElementById('sLoc').value,
     adresse:      document.getElementById('sAdr').value,
+    num_appt:     document.getElementById('sAppt').value,
     date_mandat:  new Date().toLocaleDateString('fr-FR')
   };
+  sw.numAppt = document.getElementById('sAppt').value;
   showLd('Génération mandat SEPA…');
   try {
     const mb   = await sbDown('modeles', sw.modPath);
@@ -1360,8 +1421,15 @@ async function sN3() {
     sw.genBlob = blob;
     const fn = 'sepa_' + (data.locataire||'loc').replace(/\s+/g,'_') + '_' + Date.now() + '.docx';
     await sbUp('baux-generes', fn, blob).catch(function(){});
-    await sbQ('mandats_sepa', {method:'POST', body:{locataire_nom:data.locataire, maison_id:CM?CM.id:null, iban:data.iban, statut:'genere', docx_path:fn}}).catch(function(){});
-    hideLoad(); sGs(4); toast('Mandat SEPA généré !', 'ok');
+    // Extraire nom de famille (dernier mot si "Prénom Nom", sinon premier mot)
+    var nomFamille = (data.locataire || '').trim().split(/\s+/).pop();
+    var numAppt = (sw.numAppt || '000');
+    var codeSepa = await genCodeSepa(CM?CM.id:null, CM?CM.nom:'', numAppt, nomFamille);
+    sw.codeSepa = codeSepa;
+    await sbQ('mandats_sepa', {method:'POST', body:{code_sepa:codeSepa, locataire_nom:data.locataire, maison_id:CM?CM.id:null, iban:data.iban, statut:'genere', docx_path:fn}}).catch(function(){});
+    hideLoad(); sGs(4);
+    document.getElementById('codeSepaAff').textContent = codeSepa;
+    toast('Mandat SEPA généré !', 'ok');
   } catch(e) { hideLoad(); toast('Erreur: ' + e.message, 'err'); }
 }
 
@@ -1478,6 +1546,7 @@ function openUploadMod(maisonId, maisonNom) {
   document.getElementById('mUpMN').textContent = maisonNom;
   document.getElementById('mUpF').value = '';
   document.getElementById('upPillM').className = 'hide';
+  document.getElementById('mUpErr').style.display = 'none';
   openMod('mUpM');
 }
 
@@ -1501,33 +1570,46 @@ async function createBucketIfNeeded(name) {
 async function doUpload() {
   const file = document.getElementById('mUpF').files[0];
   const type = document.getElementById('mUpT').value;
-  if (!file)        { toast('Sélectionnez un fichier .docx', 'err'); return; }
-  if (!upMaisonId)  { toast('Aucune maison sélectionnée', 'err'); return; }
-  showLd('Téléversement…');
+  const errEl = document.getElementById('mUpErr');
+
+  errEl.style.display = 'none';
+
+  if (!file)       { errEl.textContent = '⚠️ Sélectionnez un fichier .docx'; errEl.style.display = 'block'; return; }
+  if (!upMaisonId) { errEl.textContent = '⚠️ Aucune maison sélectionnée';    errEl.style.display = 'block'; return; }
+
+  showLd('Téléversement en cours…');
   try {
-    // Créer le bucket si nécessaire
-    await createBucketIfNeeded('modeles');
-
-    const ex = await sbQ('modeles?select=id&type_doc=eq.' + type + '&maison_id=eq.' + upMaisonId).catch(function(){return [];});
-    const v  = (ex ? ex.length : 0) + 1;
-    const path = type + '/' + upMaisonId + '/' + Date.now() + '_' + file.name;
-
-    // Upload avec upsert (PUT si POST échoue)
+    const ex  = await sbQ('modeles?select=id&type_doc=eq.' + type + '&maison_id=eq.' + upMaisonId).catch(function(){return [];});
+    const v   = (ex ? ex.length : 0) + 1;
+    const path = type + '/' + upMaisonId + '/' + Date.now() + '_' + file.name.replace(/\s+/g,'_');
     const hdrs = {
-      'apikey': SB_KEY,
-      'Authorization': 'Bearer ' + SB_KEY,
+      'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'x-upsert': 'true'
     };
+    // Essai POST puis PUT
     let res = await fetch(SB_URL + '/storage/v1/object/modeles/' + path, {method:'POST', headers:hdrs, body:file});
     if (!res.ok) {
       res = await fetch(SB_URL + '/storage/v1/object/modeles/' + path, {method:'PUT', headers:hdrs, body:file});
-      if (!res.ok) throw new Error('Upload échoué (' + res.status + '): ' + await res.text());
     }
-
-    await sbQ('modeles', {method:'POST', body:{nom:file.name.replace('.docx',''), type_doc:type, maison_id:upMaisonId, storage_path:path, version:v}});
-    hideLoad(); closeMod('mUpM'); toast('Modèle téléversé ✅', 'ok'); loadAdmin();
-  } catch(e) { hideLoad(); toast('Erreur: ' + e.message, 'err'); }
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error('Storage ' + res.status + ' : ' + txt);
+    }
+    // Enregistrer en base
+    await sbQ('modeles', {method:'POST', body:{
+      nom: file.name.replace('.docx','').replace(/\s+/g,'_'),
+      type_doc: type, maison_id: upMaisonId, storage_path: path, version: v
+    }});
+    hideLoad();
+    closeMod('mUpM');
+    toast('✅ Modèle téléversé avec succès', 'ok');
+    loadAdmin();
+  } catch(e) {
+    hideLoad();
+    errEl.textContent = '❌ Erreur : ' + e.message;
+    errEl.style.display = 'block';
+  }
 }
 
 function saveKey() {

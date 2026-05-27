@@ -1149,7 +1149,7 @@ async function bN3() {
   const d = collectData();
   showLd('Génération du bail…');
   try {
-    const modBlob = await sbDown('modeles', bw.modPath);
+    const modBlob = await sbDown('MODELES', bw.modPath);
     const docx    = await genDocx(modBlob, d, bw.opt);
     bw.genBlob    = docx;
     bw.data       = d;
@@ -1416,7 +1416,7 @@ async function sN3() {
   sw.numAppt = document.getElementById('sAppt').value;
   showLd('Génération mandat SEPA…');
   try {
-    const mb   = await sbDown('modeles', sw.modPath);
+    const mb   = await sbDown('MODELES', sw.modPath);
     const blob = await genDocx(mb, data, 0);
     sw.genBlob = blob;
     const fn = 'sepa_' + (data.locataire||'loc').replace(/\s+/g,'_') + '_' + Date.now() + '.docx';
@@ -1588,9 +1588,9 @@ async function doUpload() {
       'x-upsert': 'true'
     };
     // Essai POST puis PUT
-    let res = await fetch(SB_URL + '/storage/v1/object/modeles/' + path, {method:'POST', headers:hdrs, body:file});
+    let res = await fetch(SB_URL + '/storage/v1/object/MODELES/' + path, {method:'POST', headers:hdrs, body:file});
     if (!res.ok) {
-      res = await fetch(SB_URL + '/storage/v1/object/modeles/' + path, {method:'PUT', headers:hdrs, body:file});
+      res = await fetch(SB_URL + '/storage/v1/object/MODELES/' + path, {method:'PUT', headers:hdrs, body:file});
     }
     if (!res.ok) {
       const txt = await res.text();

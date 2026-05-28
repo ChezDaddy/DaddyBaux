@@ -1312,13 +1312,18 @@ async function extractFiche(pdfFile) {
   const pdfText = await pdfToText(pdfFile);
 
   const prompt = `Tu analyses une "Fiche de préparation de Bail" de Maison Daddy.
-C'est un formulaire avec des libellés et des valeurs saisies à côté.
-Les textes {{xxx}} sont des marqueurs — la valeur réelle est saisie juste après.
-Ignore les "#N/A". Le numéro d'appartement est en haut à droite.
-Les montants sont dans la section "Conditions de location" en bas.
-Retourne UNIQUEMENT un JSON valide, sans texte ni backticks autour.
-Si une valeur est absente, mets "".
-Format attendu :
+Les placeholders {{xxx}} indiquent l'emplacement — la valeur réelle est saisie juste à côté.
+Ignore les "#N/A". Retourne UNIQUEMENT un JSON valide, sans texte ni backticks. Si absent, mets "".
+
+ATTENTION CES CHAMPS SPÉCIFIQUES :
+- date_signature : cherche le placeholder "{{date_signature}}" qui est EN BAS de la fiche (pas la ligne "Date de signature du bail :" en haut qui est vide). La valeur est saisie juste à côté de ce placeholder.
+- provision_garantie_mois : valeur après "Dépôt de Garantie (Caution), en mois = {{provision_garantie_mois}}" — format ex: "un (1)"
+- provision_garantie : valeur après "Dépôt de Garantie (Caution) = {{provision_garantie}}" — nombre uniquement ex: "692.91"
+- numero_appartement : valeur en haut à droite à côté de "{{numero_appartement}}"
+- garant_prenom : valeur après "Garant (nom, prénom) : {{garant_nom}}" — nom ET prénom ensemble
+- option_bail : "1" si Option 1 cochée, "2" si Option 2 cochée
+
+Format JSON à retourner :
 {"locataire_nom":"nom ET prénom","locataire_date_lieu_naissance":"JJ/MM/AAAA à Ville","locataire_nationalite":"","locataire_regime_matrimonial":"","locataire_adresse":"","locataire_telephone":"","locataire_email":"","date_signature":"JJ/MM/AAAA","option_bail":"1 ou 2","date_posterieure":"JJ/MM/AAAA ou vide","numero_appartement":"ex 301","garant_prenom":"nom ET prénom ou vide","garant_adresse":"","appartement_meuble":"meublé ou non meublé","equipement_pmr":"Équipé PMR ou Non équipé PMR","surface_habitable":"ex 29.07","surface_carrez":"ex 22.06","appt_type":"ex T2","nb_chambres":"ex une (1)","nb_salle_douche":"ex une (1)","nb_salon":"ex une pièce principale","depenses_energie_annuelles":"ex entre 360 € et 540 €","montant_loyer":"ex 692.91","provision_charges":"ex 130.81","provision_garantie_mois":"ex un (1)","provision_garantie":"ex 692.91","plafond_honoraires_gestion":"ex 234.59","plafond_etat_lieux":"ex 88.08"}`;
 
   const res = await fetch('https://api.mistral.ai/v1/chat/completions', {

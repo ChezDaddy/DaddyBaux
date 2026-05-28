@@ -495,11 +495,11 @@ code{background:var(--bg);border:1px solid var(--brd);border-radius:4px;padding:
       </div>
 
       <div class="card">
-        <div class="ctit">🔑 Clé API Anthropic (extraction PDF)</div>
-        <div class="al al-i">Requise pour l'extraction automatique des fiches PDF. Stockée dans votre navigateur.</div>
+        <div class="ctit">🔑 Clé API Mistral (extraction PDF)</div>
+        <div class="al al-i">Clé API Mistral (gratuite sur <a href="https://console.mistral.ai" target="_blank">console.mistral.ai</a>). Stockée dans votre navigateur.</div>
         <div class="frow">
           <div class="fld" style="flex:1"><label>Clé API (sk-ant-…)</label>
-            <input id="apiKI" type="password" placeholder="sk-ant-api03-…"/>
+            <input id="apiKI" type="password" placeholder="sk-… (clé Mistral)"/>
           </div>
           <div class="fld" style="align-self:flex-end;margin-bottom:13px">
             <button class="btn bp" onclick="saveKey()">💾 Enregistrer</button>
@@ -1291,75 +1291,34 @@ function removeOption(xml, chosen) {
 /* ── AI EXTRACTION ── */
 async function extractFiche(pdfFile) {
   const apiKey = getApiKey();
-  if (!apiKey) throw new Error('Clé API Anthropic non configurée → Administration → Clé API');
+  if (!apiKey) throw new Error('Clé API Mistral non configurée → Administration → Clé API');
 
   const b64 = await fileToB64(pdfFile);
 
   const prompt = `Tu analyses une "Fiche de préparation de Bail" de Maison Daddy.
+C'est un formulaire avec des libellés et des valeurs saisies à côté.
+Les textes {{xxx}} sont des marqueurs — la valeur réelle est saisie juste après.
+Ignore les "#N/A". Le numéro d'appartement est en haut à droite.
+Les montants sont dans la section "Conditions de location" en bas.
+Retourne UNIQUEMENT un JSON valide, sans texte ni backticks autour.
+Si une valeur est absente, mets "".
+Format attendu :
+{"locataire_nom":"nom ET prénom","locataire_date_lieu_naissance":"JJ/MM/AAAA à Ville","locataire_nationalite":"","locataire_regime_matrimonial":"","locataire_adresse":"","locataire_telephone":"","locataire_email":"","date_signature":"JJ/MM/AAAA","option_bail":"1 ou 2","date_posterieure":"JJ/MM/AAAA ou vide","numero_appartement":"ex 301","garant_prenom":"nom ET prénom ou vide","garant_adresse":"","appartement_meuble":"meublé ou non meublé","equipement_pmr":"Équipé PMR ou Non équipé PMR","surface_habitable":"ex 29.07","surface_carrez":"ex 22.06","appt_type":"ex T2","nb_chambres":"ex une (1)","nb_salle_douche":"ex une (1)","nb_salon":"ex une pièce principale","depenses_energie_annuelles":"ex entre 360 € et 540 €","montant_loyer":"ex 692.91","provision_charges":"ex 130.81","provision_garantie_mois":"ex un (1)","provision_garantie":"ex 692.91","plafond_honoraires_gestion":"ex 234.59","plafond_etat_lieux":"ex 88.08"}`;
 
-STRUCTURE DE LA FICHE :
-C'est un formulaire tableau avec des libellés à gauche et des valeurs saisies à droite.
-Les placeholders {{xxx}} indiquent OÙ se trouve l'information — la valeur réelle est saisie à côté.
-Exemple : "Locataire (nom, prénom) : {{locataire_nom}}" → la valeur est le texte saisi après les deux-points.
-
-IMPORTANT : 
-- Ignore les textes "#N/A"
-- Pour les Options 1/2 : regarde quelle case est cochée (☑ ou ✓ ou X) ou quelle ligne est remplie
-- Le numéro d'appartement apparaît en haut à droite de la fiche (ex: "301")
-- Les montants sont dans la section "Conditions de location" en bas
-- Date signature : cherche après "Date de signature du bail :"
-- Garant : cherche après "Garant (nom, prénom) :"
-
-Retourne UNIQUEMENT un objet JSON valide, sans texte ni backticks.
-Si une valeur est absente ou vide, mets "".
-
-{
-  "locataire_nom": "nom ET prénom du locataire (ex: Martin Jean)",
-  "locataire_date_lieu_naissance": "ex: 15/03/1985 à Paris",
-  "locataire_nationalite": "",
-  "locataire_regime_matrimonial": "",
-  "locataire_adresse": "",
-  "locataire_telephone": "",
-  "locataire_email": "",
-  "date_signature": "JJ/MM/AAAA",
-  "option_bail": "1 ou 2 selon la case cochée",
-  "date_posterieure": "JJ/MM/AAAA si option 2, sinon vide",
-  "numero_appartement": "numéro ex: 301",
-  "garant_prenom": "nom ET prénom du garant, vide si absent",
-  "garant_adresse": "",
-  "appartement_meuble": "meublé ou non meublé",
-  "equipement_pmr": "Équipé PMR ou Non équipé PMR",
-  "surface_habitable": "nombre ex: 29.07",
-  "surface_carrez": "nombre ex: 22.06",
-  "appt_type": "ex: T2",
-  "nb_chambres": "ex: une (1)",
-  "nb_salle_douche": "ex: une (1)",
-  "nb_salon": "ex: une pièce principale",
-  "depenses_energie_annuelles": "ex: entre 360 € et 540 €",
-  "montant_loyer": "nombre uniquement ex: 692.91",
-  "provision_charges": "nombre ex: 130.81",
-  "provision_garantie_mois": "ex: un (1)",
-  "provision_garantie": "nombre ex: 692.91",
-  "plafond_honoraires_gestion": "nombre ex: 234.59",
-  "plafond_etat_lieux": "nombre ex: 88.08"
-}`;
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
+      'Authorization': 'Bearer ' + apiKey
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'pixtral-large-latest',
       max_tokens: 2000,
       messages: [{
         role: 'user',
         content: [
-          {type:'document', source:{type:'base64', media_type:'application/pdf', data:b64}},
-          {type:'text', text:prompt}
+          {type: 'image_url', image_url: {url: 'data:application/pdf;base64,' + b64}},
+          {type: 'text', text: prompt}
         ]
       }]
     })
@@ -1367,12 +1326,12 @@ Si une valeur est absente ou vide, mets "".
 
   if (!res.ok) {
     const t = await res.text();
-    throw new Error('API ' + res.status + ': ' + t.slice(0, 150));
+    throw new Error('API Mistral ' + res.status + ': ' + t.slice(0, 200));
   }
   const json = await res.json();
-  const txt  = (json.content || []).find(function(c) { return c.type === 'text'; });
+  const txt = json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
   try {
-    return JSON.parse((txt ? txt.text : '{}').replace(/```json|```/g,'').trim());
+    return JSON.parse((txt || '{}').replace(/```json|```/g,'').trim());
   } catch(e) {
     return {};
   }
@@ -1459,22 +1418,27 @@ async function sN2() {
 
 async function extractRib(pdfFile) {
   const ak = getApiKey();
-  if (!ak) throw new Error('Clé API non configurée');
+  if (!ak) throw new Error('Clé API Mistral non configurée');
   const b64 = await fileToB64(pdfFile);
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method: 'POST',
-    headers: {'Content-Type':'application/json','x-api-key':ak,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body: JSON.stringify({model:'claude-sonnet-4-20250514', max_tokens:400,
-      messages:[{role:'user', content:[
-        {type:'document', source:{type:'base64', media_type:'application/pdf', data:b64}},
-        {type:'text', text:'Analyse ce RIB. Retourne UNIQUEMENT ce JSON: {"iban":"","bic":"","titulaire":"","banque":""}. Rien d\'autre.'}
-      ]}]
+    headers: {'Content-Type':'application/json','Authorization':'Bearer ' + ak},
+    body: JSON.stringify({
+      model: 'pixtral-large-latest',
+      max_tokens: 400,
+      messages: [{
+        role: 'user',
+        content: [
+          {type:'image_url', image_url:{url:'data:application/pdf;base64,' + b64}},
+          {type:'text', text:'Analyse ce RIB bancaire. Retourne UNIQUEMENT ce JSON sans backticks: {"iban":"","bic":"","titulaire":"","banque":""}'}
+        ]
+      }]
     })
   });
-  if (!res.ok) throw new Error('API ' + res.status);
+  if (!res.ok) throw new Error('API Mistral ' + res.status);
   const json = await res.json();
-  const txt  = (json.content||[]).find(function(c){return c.type==='text';});
-  return JSON.parse((txt?txt.text:'{}').replace(/```json|```/g,'').trim());
+  const txt = json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
+  return JSON.parse((txt||'{}').replace(/```json|```/g,'').trim());
 }
 
 async function sN3() {
@@ -1699,7 +1663,7 @@ function updKeyStatus() {
   const el = document.getElementById('apiKS');
   if (!el) return;
   const k = getApiKey();
-  el.textContent = k ? '✅ Clé configurée (' + k.slice(0,14) + '…)' : '⚠️ Aucune clé — extraction PDF non disponible';
+  el.textContent = k ? '✅ Clé Mistral configurée (' + k.slice(0,14) + '…)' : '⚠️ Aucune clé Mistral — extraction PDF non disponible';
   el.style.color  = k ? '#0A5C36' : '#856404';
 }
 

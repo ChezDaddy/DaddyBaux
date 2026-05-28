@@ -1217,10 +1217,67 @@ async function genDocx(modBlob, data, option) {
     nullGetter:    function() { return ''; }
   });
   doc.render(data);
+
+  // Post-traitement : colorier en bleu (#0070C0) et gras les valeurs injectées
+  var docXml = doc.getZip().file('word/document.xml').asText();
+  docXml = applyBlueFormatting(docXml, data);
+  doc.getZip().file('word/document.xml', docXml);
+
   return doc.getZip().generate({
     type:     'blob',
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   });
+}
+
+/**
+ * Applique le formatage bleu+gras sur tous les <w:t> dont le contenu
+ * correspond à une valeur injectée.
+ * Stratégie : parcourir les <w:r> (runs) et si le texte matche une valeur,
+ * injecter <w:b/> et <w:color w:val="0070C0"/> dans le <w:rPr>.
+ */
+function applyBlueFormatting(xml, data) {
+  // Construire un Set des valeurs injectées (non vides, longueur > 1)
+  var values = new Set();
+  Object.keys(data).forEach(function(k) {
+    var v = String(data[k] || '').trim();
+    if (v.length > 1) values.add(v);
+  });
+  if (values.size === 0) return xml;
+
+  // Propriétés de formatage à injecter dans <w:rPr>
+  var fmtProps = '<w:b/><w:bCs/><w:color w:val="0070C0"/>';
+
+  // Remplacer chaque <w:r>...</w:r> dont le <w:t> contient une valeur injectée
+  xml = xml.replace(/<w:r[ >][\s\S]*?<\/w:r>/g, function(run) {
+    // Extraire le texte du run
+    var tMatch = run.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/);
+    if (!tMatch) return run;
+    var runText = tMatch[1];
+
+    // Vérifier si ce texte correspond à une valeur injectée
+    var isInjected = false;
+    values.forEach(function(v) {
+      if (runText.indexOf(v) !== -1 || v.indexOf(runText) !== -1) {
+        if (runText.length > 1) isInjected = true;
+      }
+    });
+    if (!isInjected) return run;
+
+    // Appliquer le formatage
+    if (run.indexOf('<w:rPr>') !== -1) {
+      // Injecter dans le <w:rPr> existant
+      run = run.replace('<w:rPr>', '<w:rPr>' + fmtProps);
+    } else if (run.indexOf('<w:rPr/>') !== -1) {
+      // Remplacer le <w:rPr/> auto-fermant
+      run = run.replace('<w:rPr/>', '<w:rPr>' + fmtProps + '</w:rPr>');
+    } else {
+      // Ajouter <w:rPr> avant <w:t>
+      run = run.replace(/<w:t/, '<w:rPr>' + fmtProps + '</w:rPr><w:t');
+    }
+    return run;
+  });
+
+  return xml;
 }
 
 function removeOption(xml, chosen) {
@@ -1238,36 +1295,54 @@ async function extractFiche(pdfFile) {
 
   const b64 = await fileToB64(pdfFile);
 
-  const prompt = 'Tu analyses une "Fiche de préparation de Bail" standardisée de Maison Daddy.\n' +
-    'C\'est un tableau : colonne gauche = libellé, colonne droite = valeur.\n' +
-    'Retourne UNIQUEMENT un objet JSON valide, sans texte ni backticks autour.\n' +
-    'Si une valeur est absente, mets "".\n\n' +
-    'Champs à extraire :\n' +
-    '- locataire_nom : nom ET prénom ensemble (ex: "Martin Jean")\n' +
-    '- locataire_date_lieu_naissance : ex "15/03/1985 à Paris"\n' +
-    '- locataire_nationalite\n- locataire_regime_matrimonial\n' +
-    '- locataire_adresse\n- locataire_telephone\n- locataire_email\n' +
-    '- date_signature : format JJ/MM/AAAA\n' +
-    '- option_bail : "1" si Option 1 cochée, "2" si Option 2\n' +
-    '- date_posterieure : format JJ/MM/AAAA si Option 2, sinon ""\n' +
-    '- numero_appartement\n' +
-    '- garant_prenom : nom ET prénom du garant ensemble, "" si pas de garant\n' +
-    '- garant_adresse\n' +
-    '- appartement_meuble : "meublé" ou "non meublé"\n' +
-    '- equipement_pmr : "Équipé PMR" ou "Non équipé PMR"\n' +
-    '- surface_habitable : nombre uniquement ex "29.07"\n' +
-    '- surface_carrez : nombre ex "22.06"\n' +
-    '- appt_type : ex "T2"\n' +
-    '- nb_chambres : ex "une (1)"\n' +
-    '- nb_salle_douche : ex "une (1)"\n' +
-    '- nb_salon : ex "une pièce principale"\n' +
-    '- depenses_energie_annuelles : ex "entre 360 € et 540 €"\n' +
-    '- montant_loyer : nombre uniquement ex "692.91"\n' +
-    '- provision_charges : nombre ex "130.81"\n' +
-    '- provision_garantie_mois : ex "un (1)"\n' +
-    '- provision_garantie : nombre ex "692.91"\n' +
-    '- plafond_honoraires_gestion : nombre ex "234.59"\n' +
-    '- plafond_etat_lieux : nombre ex "88.08"';
+  const prompt = `Tu analyses une "Fiche de préparation de Bail" de Maison Daddy.
+
+STRUCTURE DE LA FICHE :
+C'est un formulaire tableau avec des libellés à gauche et des valeurs saisies à droite.
+Les placeholders {{xxx}} indiquent OÙ se trouve l'information — la valeur réelle est saisie à côté.
+Exemple : "Locataire (nom, prénom) : {{locataire_nom}}" → la valeur est le texte saisi après les deux-points.
+
+IMPORTANT : 
+- Ignore les textes "#N/A"
+- Pour les Options 1/2 : regarde quelle case est cochée (☑ ou ✓ ou X) ou quelle ligne est remplie
+- Le numéro d'appartement apparaît en haut à droite de la fiche (ex: "301")
+- Les montants sont dans la section "Conditions de location" en bas
+- Date signature : cherche après "Date de signature du bail :"
+- Garant : cherche après "Garant (nom, prénom) :"
+
+Retourne UNIQUEMENT un objet JSON valide, sans texte ni backticks.
+Si une valeur est absente ou vide, mets "".
+
+{
+  "locataire_nom": "nom ET prénom du locataire (ex: Martin Jean)",
+  "locataire_date_lieu_naissance": "ex: 15/03/1985 à Paris",
+  "locataire_nationalite": "",
+  "locataire_regime_matrimonial": "",
+  "locataire_adresse": "",
+  "locataire_telephone": "",
+  "locataire_email": "",
+  "date_signature": "JJ/MM/AAAA",
+  "option_bail": "1 ou 2 selon la case cochée",
+  "date_posterieure": "JJ/MM/AAAA si option 2, sinon vide",
+  "numero_appartement": "numéro ex: 301",
+  "garant_prenom": "nom ET prénom du garant, vide si absent",
+  "garant_adresse": "",
+  "appartement_meuble": "meublé ou non meublé",
+  "equipement_pmr": "Équipé PMR ou Non équipé PMR",
+  "surface_habitable": "nombre ex: 29.07",
+  "surface_carrez": "nombre ex: 22.06",
+  "appt_type": "ex: T2",
+  "nb_chambres": "ex: une (1)",
+  "nb_salle_douche": "ex: une (1)",
+  "nb_salon": "ex: une pièce principale",
+  "depenses_energie_annuelles": "ex: entre 360 € et 540 €",
+  "montant_loyer": "nombre uniquement ex: 692.91",
+  "provision_charges": "nombre ex: 130.81",
+  "provision_garantie_mois": "ex: un (1)",
+  "provision_garantie": "nombre ex: 692.91",
+  "plafond_honoraires_gestion": "nombre ex: 234.59",
+  "plafond_etat_lieux": "nombre ex: 88.08"
+}`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

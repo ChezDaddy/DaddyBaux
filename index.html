@@ -1312,19 +1312,35 @@ async function extractFiche(pdfFile) {
   const pdfText = await pdfToText(pdfFile);
 
   const prompt = `Tu analyses une "Fiche de préparation de Bail" de Maison Daddy.
-Les placeholders {{xxx}} indiquent l'emplacement — la valeur réelle est saisie juste à côté.
+Les placeholders {{xxx}} indiquent l'emplacement — la valeur réelle est saisie juste à côté du placeholder.
 Ignore les "#N/A". Retourne UNIQUEMENT un JSON valide, sans texte ni backticks. Si absent, mets "".
 
-ATTENTION CES CHAMPS SPÉCIFIQUES :
-- date_signature : cherche le placeholder "{{date_signature}}" qui est EN BAS de la fiche (pas la ligne "Date de signature du bail :" en haut qui est vide). La valeur est saisie juste à côté de ce placeholder.
-- provision_garantie_mois : valeur après "Dépôt de Garantie (Caution), en mois = {{provision_garantie_mois}}" — format ex: "un (1)"
-- provision_garantie : valeur après "Dépôt de Garantie (Caution) = {{provision_garantie}}" — nombre uniquement ex: "692.91"
-- numero_appartement : valeur en haut à droite à côté de "{{numero_appartement}}"
-- garant_prenom : valeur après "Garant (nom, prénom) : {{garant_nom}}" — nom ET prénom ensemble
-- option_bail : "1" si Option 1 cochée, "2" si Option 2 cochée
+CORRESPONDANCES EXACTES (libellé dans la fiche → clé JSON) :
+- "Date de signature du bail : {{date_signature}}" → date_signature (format JJ/MM/AAAA)
+- "Locataire (nom, prénom) : {{locataire_nom}}" → locataire_nom (nom ET prénom)
+- "{{numero_appartement}}" en haut à droite → numero_appartement
+- "Option 1 cochée" ou "Option 2 cochée" → option_bail ("1" ou "2")
+- "{{date_posterieure}}" → date_posterieure (si option 2 seulement)
+- "Garant (nom, prénom) : {{garant_nom}}" → garant_prenom (nom ET prénom)
+- "Adresse : {{garant_adresse}}" (section garant) → garant_adresse
+- "Appartement meublé : {{appartement_meuble}}" → appartement_meuble ("meublé" ou "non meublé")
+- "Equipement PMR : {{equipement_pmr}}" → equipement_pmr ("Équipé PMR" ou "Non équipé PMR")
+- "Surface habitable - au sol : {{surface_habitable}}" → surface_habitable (nombre ex: 29.07)
+- "Surface Carrez : {{surface_carrez}}" → surface_carrez (nombre ex: 22.06)
+- "Type d'appartement : {{appt_type}}" → appt_type (ex: T2)
+- "Nb chambres : {{nb_chambres}}" → nb_chambres (ex: une (1))
+- "Nb Salle de douche : {{nb_salle_douche}}" → nb_salle_douche (ex: une (1))
+- "Nb salon : {{nb_salon}}" → nb_salon (ex: une pièce principale)
+- "{{depenses_energie_annuelles}}" → depenses_energie_annuelles (ex: entre 360 € et 540 €)
+- "Montant du Loyer = {{montant_loyer}}" → montant_loyer (nombre ex: 692.91)
+- "provision pour charges = {{provision_charges}}" → provision_charges (nombre ex: 130.81)
+- "Dépôt de Garantie (Caution), en mois = {{provision_garantie_mois}}" → provision_garantie_mois (ex: un (1))
+- "Dépôt de Garantie (Caution) = {{provision_garantie}}" → provision_garantie (nombre ex: 692.91)
+- "honoraires = {{plafond_honoraires_gestion}}" → plafond_honoraires_gestion (nombre ex: 234.59)
+- "état des lieux = {{plafond_etat_lieux}}" → plafond_etat_lieux (nombre ex: 88.08)
 
-Format JSON à retourner :
-{"locataire_nom":"nom ET prénom","locataire_date_lieu_naissance":"JJ/MM/AAAA à Ville","locataire_nationalite":"","locataire_regime_matrimonial":"","locataire_adresse":"","locataire_telephone":"","locataire_email":"","date_signature":"JJ/MM/AAAA","option_bail":"1 ou 2","date_posterieure":"JJ/MM/AAAA ou vide","numero_appartement":"ex 301","garant_prenom":"nom ET prénom ou vide","garant_adresse":"","appartement_meuble":"meublé ou non meublé","equipement_pmr":"Équipé PMR ou Non équipé PMR","surface_habitable":"ex 29.07","surface_carrez":"ex 22.06","appt_type":"ex T2","nb_chambres":"ex une (1)","nb_salle_douche":"ex une (1)","nb_salon":"ex une pièce principale","depenses_energie_annuelles":"ex entre 360 € et 540 €","montant_loyer":"ex 692.91","provision_charges":"ex 130.81","provision_garantie_mois":"ex un (1)","provision_garantie":"ex 692.91","plafond_honoraires_gestion":"ex 234.59","plafond_etat_lieux":"ex 88.08"}`;
+Retourne ce JSON complété :
+{"locataire_nom":"","locataire_date_lieu_naissance":"","locataire_nationalite":"","locataire_regime_matrimonial":"","locataire_adresse":"","locataire_telephone":"","locataire_email":"","date_signature":"","option_bail":"","date_posterieure":"","numero_appartement":"","garant_prenom":"","garant_adresse":"","appartement_meuble":"","equipement_pmr":"","surface_habitable":"","surface_carrez":"","appt_type":"","nb_chambres":"","nb_salle_douche":"","nb_salon":"","depenses_energie_annuelles":"","montant_loyer":"","provision_charges":"","provision_garantie_mois":"","provision_garantie":"","plafond_honoraires_gestion":"","plafond_etat_lieux":""}`;
 
   const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method: 'POST',

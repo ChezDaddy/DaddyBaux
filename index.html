@@ -680,7 +680,7 @@ function getUsers() {
   return DEFAULT_USERS;
 }
 function saveUsers(u) { safeStorage(function(){ localStorage.setItem('db_users', btoa(JSON.stringify(u))); }, null); }
-function getApiKey() { return safeStorage(function(){ return localStorage.getItem('ak'); }, '') || ''; }
+function getApiKey() { return (safeStorage(function(){ return localStorage.getItem('ak'); }, '') || '').trim().replace(/\s+/g,''); }
 
 
 /* ── GÉNÉRATION CODES BAIL & SEPA ── */
@@ -1652,7 +1652,7 @@ async function doUpload() {
 }
 
 function saveKey() {
-  const k = document.getElementById('apiKI').value.trim();
+  const k = document.getElementById('apiKI').value.trim().replace(/\s+/g,'');
   if (!k) { toast('Entrez une clé valide', 'err'); return; }
   localStorage.setItem('ak', k);
   toast('Clé API enregistrée', 'ok');

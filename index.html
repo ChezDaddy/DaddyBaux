@@ -1289,11 +1289,27 @@ function removeOption(xml, chosen) {
 }
 
 /* ── AI EXTRACTION ── */
+async function pdfToText(pdfFile) {
+  // Utiliser PDF.js pour extraire le texte du PDF
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+  const pdfjsLib = window['pdfjs-dist/build/pdf'];
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const ab = await pdfFile.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data: ab}).promise;
+  var text = '';
+  for (var i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(function(s){ return s.str; }).join(' ') + '\n';
+  }
+  return text;
+}
+
 async function extractFiche(pdfFile) {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error('Clé API Mistral non configurée → Administration → Clé API');
 
-  const b64 = await fileToB64(pdfFile);
+  const pdfText = await pdfToText(pdfFile);
 
   const prompt = `Tu analyses une "Fiche de préparation de Bail" de Maison Daddy.
 C'est un formulaire avec des libellés et des valeurs saisies à côté.
@@ -1312,14 +1328,11 @@ Format attendu :
       'Authorization': 'Bearer ' + apiKey
     },
     body: JSON.stringify({
-      model: 'pixtral-large-latest',
+      model: 'mistral-large-latest',
       max_tokens: 2000,
       messages: [{
         role: 'user',
-        content: [
-          {type: 'image_url', image_url: {url: 'data:application/pdf;base64,' + b64}},
-          {type: 'text', text: prompt}
-        ]
+        content: prompt + '\n\n--- CONTENU DU PDF ---\n' + pdfText
       }]
     })
   });
@@ -1419,19 +1432,16 @@ async function sN2() {
 async function extractRib(pdfFile) {
   const ak = getApiKey();
   if (!ak) throw new Error('Clé API Mistral non configurée');
-  const b64 = await fileToB64(pdfFile);
+  const ribText = await pdfToText(pdfFile);
   const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method: 'POST',
     headers: {'Content-Type':'application/json','Authorization':'Bearer ' + ak},
     body: JSON.stringify({
-      model: 'pixtral-large-latest',
+      model: 'mistral-large-latest',
       max_tokens: 400,
       messages: [{
         role: 'user',
-        content: [
-          {type:'image_url', image_url:{url:'data:application/pdf;base64,' + b64}},
-          {type:'text', text:'Analyse ce RIB bancaire. Retourne UNIQUEMENT ce JSON sans backticks: {"iban":"","bic":"","titulaire":"","banque":""}'}
-        ]
+        content: 'Analyse ce RIB bancaire et retourne UNIQUEMENT ce JSON sans backticks: {"iban":"","bic":"","titulaire":"","banque":""}\n\n--- RIB ---\n' + ribText
       }]
     })
   });

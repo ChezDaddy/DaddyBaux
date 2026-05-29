@@ -1194,10 +1194,9 @@ function dlBail() {
 }
 
 /* ── DOCX ── */
-async function loadDocxLib() {
-  if (window.PizZip && window.Docxtemplater) return;
+async function loadZipLib() {
+  if (window.PizZip) return;
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip.min.js');
-  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.44.4/docxtemplater.js');
 }
 
 function loadScript(src) {
@@ -1210,73 +1209,60 @@ function loadScript(src) {
 }
 
 async function genDocx(modBlob, data, option) {
-  await loadDocxLib();
+  await loadZipLib();
   const ab  = await modBlob.arrayBuffer();
   const zip = new PizZip(ab);
 
-  // Fusionner les placeholders fragmentés entre plusieurs runs AVANT le rendu
   var xml = zip.file('word/document.xml').asText();
-  xml = mergeFragmentedPlaceholders(xml);
 
+  // 1. Fusionner les placeholders fragmentés entre runs (Word fragmente à cause du correcteur)
+  xml = fusePlaceholders(xml);
+
+  // 2. Supprimer l'option non choisie
   if (option === 1 || option === 2) {
     xml = removeOption(xml, option);
   }
+
+  // 3. Remplacer chaque placeholder par la valeur correspondante
+  Object.keys(data).forEach(function(k) {
+    var val = String(data[k] || '');
+    // Échapper les caractères XML spéciaux
+    var safe = val
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    // Remplacer le placeholder dans le XML
+    var ph = '\\{\\{' + k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\}\\}';
+    xml = xml.replace(new RegExp(ph, 'g'), safe);
+  });
+
+  // 4. Appliquer le formatage bleu+gras sur les valeurs injectées
+  xml = applyBlueFormatting(xml, data);
+
   zip.file('word/document.xml', xml);
 
-  const doc = new Docxtemplater(zip, {
-    paragraphLoop: true,
-    linebreaks:    true,
-    delimiters:    {start:'{{', end:'}}'},
-    nullGetter:    function() { return ''; },
-    errorLogging:  false
+  var out = zip.generate({
+    type:        'blob',
+    mimeType:    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    compression: 'DEFLATE'
   });
-  try {
-    doc.render(data);
-  } catch(renderErr) {
-    var msg;
-    if (renderErr && renderErr.properties && renderErr.properties.errors) {
-      msg = renderErr.properties.errors.map(function(e){ return e.message || JSON.stringify(e); }).join(', ');
-    } else if (renderErr && renderErr.message) {
-      msg = renderErr.message;
-    } else {
-      msg = JSON.stringify(renderErr);
-    }
-    throw new Error('Rendu DOCX: ' + msg);
-  }
-
-  // Post-traitement : colorier en bleu (#0070C0) et gras les valeurs injectées
-  var docXml = doc.getZip().file('word/document.xml').asText();
-  docXml = applyBlueFormatting(docXml, data);
-  doc.getZip().file('word/document.xml', docXml);
-
-  return doc.getZip().generate({
-    type:     'blob',
-    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  });
+  return out;
 }
 
 /**
  * Fusionne les placeholders {{...}} fragmentés sur plusieurs <w:r> runs.
  * Word fragmente les placeholders à cause du correcteur orthographique.
- * Stratégie : supprimer les balises intermédiaires entre {{ et }} pour reconstituer le placeholder.
  */
-function mergeFragmentedPlaceholders(xml) {
-  // Répéter jusqu'à ce qu'il n'y ait plus de fragmentations
-  var prev = '';
-  var iterations = 0;
-  while (prev !== xml && iterations < 20) {
-    prev = xml;
-    iterations++;
-    // Fusionner : {{ dans un <w:t>, texte dans d'autres runs, }} dans un <w:t>
-    // Pattern : trouve {{ ... </w:t> ... <w:t...> ... }} et supprime le XML entre
-    xml = xml.replace(
-      /(\{\{[^}]*)(<\/w:t>(?:<\/w:r>)?(?:<w:proofErr[^\/]*\/>)*(?:<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?)?<w:t[^>]*>)([^{]*?\}\})/g,
-      function(match, p1, middle, p2) {
-        return p1 + p2;
-      }
-    );
-  }
-  return xml;
+function fusePlaceholders(xml) {
+  // Supprimer toutes les balises XML entre {{ et }} pour reconstituer le placeholder propre
+  return xml.replace(
+    /\{\{((?:[^{}]|<[^>]+>|\n)*?)\}\}/g,
+    function(match, inner) {
+      var name = inner.replace(/<[^>]+>/g, '').replace(/\s+/g, '').trim();
+      return '{{' + name + '}}';
+    }
+  );
 }
 
 /**

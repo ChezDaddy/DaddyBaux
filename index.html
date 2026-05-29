@@ -1300,19 +1300,35 @@ function removeOption(xml, chosen) {
 
 /* ── AI EXTRACTION ── */
 async function pdfToText(pdfFile) {
-  // Utiliser PDF.js pour extraire le texte du PDF
-  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
-  const pdfjsLib = window['pdfjs-dist/build/pdf'];
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  const ab = await pdfFile.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({data: ab}).promise;
-  var text = '';
-  for (var i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    text += content.items.map(function(s){ return s.str; }).join(' ') + '\n';
-  }
-  return text;
+  // Lecture du PDF comme texte brut (extraction des chaînes lisibles)
+  return new Promise(function(resolve, reject) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const ab = e.target.result;
+        const bytes = new Uint8Array(ab);
+        // Décoder en latin-1 pour capturer tous les caractères
+        let raw = '';
+        for (let i = 0; i < bytes.length; i++) {
+          raw += String.fromCharCode(bytes[i]);
+        }
+        // Extraire les chaînes de texte lisibles (séquences de caractères imprimables)
+        const strings = [];
+        const re = /[\x20-\x7E\xC0-\xFF]{3,}/g;
+        let m;
+        while ((m = re.exec(raw)) !== null) {
+          strings.push(m[0]);
+        }
+        // Reconstituer le texte en joignant les chaînes
+        const text = strings.join(' ');
+        resolve(text);
+      } catch(err) {
+        reject(err);
+      }
+    };
+    reader.onerror = function() { reject(new Error('Lecture PDF échouée')); };
+    reader.readAsArrayBuffer(pdfFile);
+  });
 }
 
 async function extractFiche(pdfFile) {

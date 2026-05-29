@@ -1333,11 +1333,24 @@ function applyBlueFormatting(xml, data) {
 }
 
 function removeOption(xml, chosen) {
-  const remove = chosen === 1 ? 2 : 1;
-  const marker = 'Option ' + remove + ' :';
-  // Supprimer chaque <w:p> contenant ce marqueur
-  const re = new RegExp('<w:p[ >][\\s\\S]*?' + marker.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '[\\s\\S]*?<\\/w:p>', 'g');
-  return xml.replace(re, '');
+  var remove = chosen === 1 ? 2 : 1;
+  var marker = 'Option ' + remove + ' :';
+
+  // Approche sûre : split sur les paragraphes et supprimer ceux qui contiennent le marqueur
+  // On utilise split sur </w:p> pour traiter paragraphe par paragraphe
+  var parts = xml.split('</w:p>');
+  var result = [];
+  for (var i = 0; i < parts.length; i++) {
+    var para = parts[i];
+    // Extraire le texte brut du paragraphe pour vérifier le marqueur
+    var text = para.replace(/<[^>]+>/g, '');
+    if (text.indexOf(marker) !== -1) {
+      // Supprimer ce paragraphe - ne pas l'ajouter au résultat
+      continue;
+    }
+    result.push(para);
+  }
+  return result.join('</w:p>');
 }
 
 /* ── AI EXTRACTION ── */

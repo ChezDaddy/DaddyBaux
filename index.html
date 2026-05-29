@@ -1230,11 +1230,15 @@ async function genDocx(modBlob, data, option) {
   try {
     doc.render(data);
   } catch(renderErr) {
-    // Docxtemplater peut lancer un objet Error ou un Event - on normalise
-    var msg = renderErr && renderErr.message ? renderErr.message :
-              renderErr && renderErr.properties ? JSON.stringify(renderErr.properties) :
-              'Erreur de rendu DOCX (placeholder manquant ou modèle invalide)';
-    throw new Error(msg);
+    var msg;
+    if (renderErr && renderErr.properties && renderErr.properties.errors) {
+      msg = renderErr.properties.errors.map(function(e){ return e.message || JSON.stringify(e); }).join(', ');
+    } else if (renderErr && renderErr.message) {
+      msg = renderErr.message;
+    } else {
+      msg = JSON.stringify(renderErr);
+    }
+    throw new Error('Rendu DOCX: ' + msg);
   }
 
   // Post-traitement : colorier en bleu (#0070C0) et gras les valeurs injectées

@@ -1155,9 +1155,12 @@ async function bN3() {
       if (!mods || !mods.length) throw new Error('Aucun modèle de bail configuré pour cette maison. Uploadez-en un dans Administration.');
       bw.modPath = mods[0].storage_path;
     }
+    console.log('[bN3] modPath:', bw.modPath);
     const modBlob = await sbDown('modeles', bw.modPath);
-    const docx    = await genDocx(modBlob, d, bw.opt);
-    bw.genBlob    = docx;
+    console.log('[bN3] modBlob size:', modBlob ? modBlob.size : 'null');
+    const docx = await genDocx(modBlob, d, bw.opt);
+    console.log('[bN3] docx généré OK');
+    bw.genBlob = docx;
     bw.data       = d;
 
     const fname = 'bail_' + (d.locataire_nom||'locataire').replace(/\s+/g,'_') + '_' + Date.now() + '.docx';
@@ -1181,7 +1184,8 @@ async function bN3() {
     toast('Bail généré avec succès !', 'ok');
   } catch(e) {
     hideLoad();
-    toast('Erreur génération: ' + e.message, 'err');
+    console.error('[bN3] Erreur complète:', e);
+    toast('Erreur génération: ' + (e.message || JSON.stringify(e)), 'err');
   }
 }
 

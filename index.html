@@ -1230,43 +1230,41 @@ function loadScript(src) {
 }
 
 async function genDocx(modBlob, data, option) {
-  // Utiliser JSZip (déjà chargé en <head>)
   const ab  = await modBlob.arrayBuffer();
   const zip = await JSZip.loadAsync(ab);
 
-  var xml = await zip.file('word/document.xml').async('string');
+  // Lire en uint8array puis décoder en UTF-8 (évite la troncature de async('string'))
+  var xmlBytes = await zip.file('word/document.xml').async('uint8array');
+  var xml = new TextDecoder('utf-8').decode(xmlBytes);
 
-  // 1. Fusionner les placeholders fragmentés entre runs (Word fragmente à cause du correcteur)
   // Supprimer l'option non choisie
   if (option === 1 || option === 2) {
     xml = removeOption(xml, option);
   }
 
-  // Remplacer chaque placeholder par la valeur correspondante
+  // Remplacer chaque {{placeholder}} par la valeur
   Object.keys(data).forEach(function(k) {
     var val = String(data[k] || '');
-    // Échapper les caractères XML spéciaux
     var safe = val
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
-    // Remplacer le placeholder dans le XML
-    var ph = '\\{\\{' + k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\}\\}';
-    xml = xml.replace(new RegExp(ph, 'g'), safe);
+    xml = xml.split('{{' + k + '}}').join(safe);
   });
 
-  // Appliquer le formatage bleu+gras sur les valeurs injectées
+  // Formatage bleu+gras
   xml = applyBlueFormatting(xml, data);
 
-  zip.file('word/document.xml', xml);
+  // Réécrire le XML en bytes UTF-8
+  var xmlOut = new TextEncoder().encode(xml);
+  zip.file('word/document.xml', xmlOut);
 
-  var out = await zip.generateAsync({
+  return await zip.generateAsync({
     type:        'blob',
     mimeType:    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     compression: 'STORE'
   });
-  return out;
 }
 
 /**

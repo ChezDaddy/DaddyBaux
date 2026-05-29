@@ -257,7 +257,7 @@ code{background:var(--bg);border:1px solid var(--brd);border-radius:4px;padding:
       <div class="card" style="padding:14px">
         <div class="flex gap12">
           <div class="fld" style="margin:0;flex:1"><label>Statut</label>
-            <select id="fSt" onchange="loadBaux()"><option value="">Tous</option><option value="brouillon">Brouillon</option><option value="genere">Généré</option></select>
+            <select id="fSt" onchange="loadBaux()"><option value="">Tous</option><option value="brouillon">Brouillon</option><option value="genere">Généré</option><option value="archive">Archivé</option></select>
           </div>
           <div class="fld" style="margin:0;flex:2"><label>Recherche</label>
             <input id="fSr" type="text" placeholder="Nom du locataire…" oninput="loadBaux()"/>
@@ -265,7 +265,7 @@ code{background:var(--bg);border:1px solid var(--brd);border-radius:4px;padding:
         </div>
       </div>
       <div class="tw"><table>
-        <thead><tr><th>Locataire</th><th>Maison</th><th>Loyer</th><th>Date signature</th><th>Créé le</th><th>Statut</th><th></th></tr></thead>
+        <thead><tr><th>Réf. bail</th><th>Locataire</th><th>Appt.</th><th>Maison</th><th>Loyer</th><th>Date signature</th><th>Statut</th><th></th></tr></thead>
         <tbody id="bauxTb"><tr><td colspan="7" class="tc mut" style="padding:24px">Chargement…</td></tr></tbody>
       </table></div>
     </div>
@@ -951,7 +951,7 @@ async function loadBaux() {
   const st = document.getElementById('fSt').value;
   const sr = document.getElementById('fSr').value.toLowerCase();
   const tb = document.getElementById('bauxTb');
-  tb.innerHTML = '<tr><td colspan="7" class="tc"><div class="spin" style="margin:16px auto"></div></td></tr>';
+  tb.innerHTML = '<tr><td colspan="8" class="tc"><div class="spin" style="margin:16px auto"></div></td></tr>';
   try {
     let q = 'baux?select=*&order=created_at.desc';
     if (CU.role === 'maison' && CM) q += '&maison_id=eq.' + CM.id;
@@ -960,22 +960,26 @@ async function loadBaux() {
     if (!rows) rows = [];
     if (sr) rows = rows.filter(function(b) { return (b.locataire_nom||'').toLowerCase().includes(sr); });
     if (!rows.length) {
-      tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--mut)">Aucun bail trouvé</td></tr>';
+      tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--mut)">Aucun bail trouvé</td></tr>';
       return;
     }
     tb.innerHTML = rows.map(function(b) {
       const m = allM.find(function(x) { return x.id == b.maison_id; });
       const dl = b.docx_path ? '<button class="btn bp" onclick="dlSb(\'' + b.docx_path + '\',\'bail_' + (b.locataire_nom||'loc').replace(/\s+/g,'_') + '.docx\')">⬇️</button>' : '';
       const del = CU.role === 'admin' ? '<button class="btn bd" onclick="delBail(\'' + b.id + '\',\'' + (b.locataire_nom||'').replace(/'/g,"\\'") + '\',' + (b.docx_path ? '\''+b.docx_path+'\'' : 'null') + ')">🗑️</button>' : '';
-      return '<tr><td><strong>' + (b.locataire_nom||'—') + '</strong></td><td>' + (m?m.nom:'—') + '</td>' +
+      const codeBadge = b.code_bail ? '<code style="font-size:.75rem">' + b.code_bail + '</code>' : '<span class="mut">—</span>';
+      return '<tr>' +
+        '<td>' + codeBadge + '</td>' +
+        '<td><strong>' + (b.locataire_nom||'—') + '</strong></td>' +
+        '<td>' + (b.numero_appartement||'—') + '</td>' +
+        '<td>' + (m?m.nom:'—') + '</td>' +
         '<td>' + (b.montant_loyer ? mFr(b.montant_loyer)+'€' : '—') + '</td>' +
         '<td>' + (b.date_signature||'—') + '</td>' +
-        '<td>' + (b.created_at ? new Date(b.created_at).toLocaleDateString('fr-FR') : '—') + '</td>' +
         '<td>' + bstat(b.statut) + '</td>' +
         '<td class="flex gap8">' + dl + del + '</td></tr>';
     }).join('');
   } catch(e) {
-    tb.innerHTML = '<tr><td colspan="7" class="tc mut" style="padding:16px">Erreur: ' + e.message + '</td></tr>';
+    tb.innerHTML = '<tr><td colspan="8" class="tc mut" style="padding:16px">Erreur: ' + e.message + '</td></tr>';
   }
 }
 
@@ -1184,15 +1188,17 @@ async function bN3() {
     console.log('[bN3] modPath:', bw.modPath);
     const modBlob = await sbDown('modeles', bw.modPath);
     console.log('[bN3] modBlob size:', modBlob ? modBlob.size : 'null');
+    // Générer le code bail AVANT genDocx pour l'injecter dans le document
+    var codeBail = await genCodeBail(CM ? CM.id : null, CM ? CM.nom : '', d.date_signature);
+    d.code_bail = codeBail;
+    bw.codeBail = codeBail;
     const docx = await genDocx(modBlob, d, bw.opt);
     console.log('[bN3] docx généré OK');
     bw.genBlob = docx;
-    bw.data       = d;
+    bw.data    = d;
 
     const fname = 'bail_' + (d.locataire_nom||'locataire').replace(/\s+/g,'_') + '_' + Date.now() + '.docx';
     await sbUp('baux-generes', fname, docx).catch(function() {});
-    var codeBail = await genCodeBail(CM ? CM.id : null, CM ? CM.nom : '', d.date_signature);
-    bw.codeBail = codeBail;
     await sbQ('baux', {method:'POST', body:{
       code_bail:     codeBail,
       locataire_nom: d.locataire_nom || '',
@@ -1402,7 +1408,7 @@ CORRESPONDANCES EXACTES (libellé dans la fiche → clé JSON) :
 - "{{depenses_energie_annuelles}}" → depenses_energie_annuelles (ex: entre 360 € et 540 €)
 - "Montant du Loyer = {{montant_loyer}}" → montant_loyer (nombre ex: 692.91)
 - "provision pour charges = {{provision_charges}}" → provision_charges (nombre ex: 130.81)
-- "Dépôt de Garantie (Caution), en mois = {{provision_garantie_mois}}" → provision_garantie_mois (ex: un (1))
+- "Dépôt de Garantie (Caution), en mois = {{provision_garantie_mois}}" → provision_garantie_mois (conserver la valeur telle quelle depuis le PDF, ex: "un (1) mois", "deux (2) mois")
 - "Dépôt de Garantie (Caution) = {{provision_garantie}}" → provision_garantie (nombre ex: 692.91)
 - "honoraires = {{plafond_honoraires_gestion}}" → plafond_honoraires_gestion (nombre ex: 234.59)
 - "état des lieux = {{plafond_etat_lieux}}" → plafond_etat_lieux (nombre ex: 88.08)
@@ -1833,7 +1839,7 @@ async function doPurge() {
 
 /* ── UTILS ── */
 function bstat(s) {
-  const map = {brouillon:'b1', valide:'b2', genere:'b3'};
+  const map = {brouillon:'b1', valide:'b2', genere:'b3', archive:'b4'};
   const cls = map[s] || 'b1';
   return '<span class="bdg ' + cls + '">' + (s||'—') + '</span>';
 }

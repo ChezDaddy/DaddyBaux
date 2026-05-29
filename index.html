@@ -1247,17 +1247,26 @@ async function genDocx(modBlob, data, option) {
 
 /**
  * Fusionne les placeholders {{...}} fragmentés sur plusieurs <w:r> runs.
- * Word fragmente les placeholders à cause du correcteur orthographique.
+ * Version sûre : regex stricte qui ne capture que des noms de placeholder [a-z_]
+ * et ne supprime jamais de contenu XML légitime.
  */
 function fusePlaceholders(xml) {
-  // Supprimer toutes les balises XML entre {{ et }} pour reconstituer le placeholder propre
-  return xml.replace(
-    /\{\{((?:[^{}]|<[^>]+>|\n)*?)\}\}/g,
-    function(match, inner) {
-      var name = inner.replace(/<[^>]+>/g, '').replace(/\s+/g, '').trim();
+  // Pattern strict : {{ + [lettres/underscores] + fermeture/ouverture de runs + [lettres/underscores] + }}
+  // Ne capture que du XML OOXML entre les fragments de nom de placeholder
+  var pattern = /\{\{([a-z_]*)(?:<\/w:t>[\s\S]*?<w:t[^>]*>)([a-z_]*\}\})/g;
+  var prev = '';
+  var iterations = 0;
+  while (prev !== xml && iterations < 15) {
+    prev = xml;
+    iterations++;
+    xml = xml.replace(pattern, function(match, p1, p2) {
+      var name = p1 + p2.replace('}}', '');
+      // Nettoyer tout XML résiduel dans le nom
+      name = name.replace(/<[^>]+>/g, '').trim();
       return '{{' + name + '}}';
-    }
-  );
+    });
+  }
+  return xml;
 }
 
 /**

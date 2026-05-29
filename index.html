@@ -1214,11 +1214,14 @@ async function genDocx(modBlob, data, option) {
   const ab  = await modBlob.arrayBuffer();
   const zip = new PizZip(ab);
 
+  // Fusionner les placeholders fragmentés entre plusieurs runs AVANT le rendu
+  var xml = zip.file('word/document.xml').asText();
+  xml = mergeFragmentedPlaceholders(xml);
+
   if (option === 1 || option === 2) {
-    let xml = zip.file('word/document.xml').asText();
     xml = removeOption(xml, option);
-    zip.file('word/document.xml', xml);
   }
+  zip.file('word/document.xml', xml);
 
   const doc = new Docxtemplater(zip, {
     paragraphLoop: true,
@@ -1250,6 +1253,30 @@ async function genDocx(modBlob, data, option) {
     type:     'blob',
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   });
+}
+
+/**
+ * Fusionne les placeholders {{...}} fragmentés sur plusieurs <w:r> runs.
+ * Word fragmente les placeholders à cause du correcteur orthographique.
+ * Stratégie : supprimer les balises intermédiaires entre {{ et }} pour reconstituer le placeholder.
+ */
+function mergeFragmentedPlaceholders(xml) {
+  // Répéter jusqu'à ce qu'il n'y ait plus de fragmentations
+  var prev = '';
+  var iterations = 0;
+  while (prev !== xml && iterations < 20) {
+    prev = xml;
+    iterations++;
+    // Fusionner : {{ dans un <w:t>, texte dans d'autres runs, }} dans un <w:t>
+    // Pattern : trouve {{ ... </w:t> ... <w:t...> ... }} et supprime le XML entre
+    xml = xml.replace(
+      /(\{\{[^}]*)(<\/w:t>(?:<\/w:r>)?(?:<w:proofErr[^\/]*\/>)*(?:<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?)?<w:t[^>]*>)([^{]*?\}\})/g,
+      function(match, p1, middle, p2) {
+        return p1 + p2;
+      }
+    );
+  }
+  return xml;
 }
 
 /**

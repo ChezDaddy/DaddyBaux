@@ -1309,40 +1309,24 @@ function removeOption(xml, chosen) {
 
 /* ── AI EXTRACTION ── */
 async function pdfToText(pdfFile) {
-  // Extraire le texte d'un PDF via lecture binaire + décodage
-  return new Promise(function(resolve, reject) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        const bytes = new Uint8Array(e.target.result);
-        let raw = '';
-        for (let i = 0; i < bytes.length; i++) {
-          raw += String.fromCharCode(bytes[i]);
-        }
-        // Extraire les blocs de texte entre parenthèses (encodage PDF standard)
-        // Les PDFs stockent le texte sous forme (texte) dans les flux
-        var texts = [];
-        // Méthode 1 : extraire les (string) entre parenthèses dans les flux PDF
-        var re1 = /\(([^\)\\]{2,})\)/g;
-        var m1;
-        while ((m1 = re1.exec(raw)) !== null) {
-          var s = m1[1].replace(/[\x00-\x08\x0E-\x1F\x7F-\x9F]/g,'').trim();
-          if (s.length > 1) texts.push(s);
-        }
-        // Méthode 2 : séquences de caractères imprimables (fallback)
-        if (texts.length < 10) {
-          var re2 = /[\x20-\x7E\xC0-\xFF]{4,}/g;
-          var m2;
-          while ((m2 = re2.exec(raw)) !== null) {
-            if (!/^[\x80-\xFF]+$/.test(m2[0])) texts.push(m2[0]);
-          }
-        }
-        resolve(texts.join(' '));
-      } catch(err) { reject(err); }
-    };
-    reader.onerror = function() { reject(new Error('Lecture PDF échouée')); };
-    reader.readAsArrayBuffer(pdfFile);
-  });
+  // PDF.js sans worker (compatible GitHub Pages / CSP)
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+  const pdfjsLib = window['pdfjs-dist/build/pdf'];
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+  const ab = await pdfFile.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({
+    data: ab,
+    disableWorker: true,
+    useWorkerFetch: false,
+    isEvalSupported: false
+  }).promise;
+  var text = '';
+  for (var i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(function(s){ return s.str; }).join(' ') + '\n';
+  }
+  return text;
 }
 
 async function extractFiche(pdfFile) {

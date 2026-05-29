@@ -1194,11 +1194,6 @@ function dlBail() {
 }
 
 /* ── DOCX ── */
-async function loadZipLib() {
-  if (window.PizZip) return;
-  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip.min.js');
-}
-
 function loadScript(src) {
   return new Promise(function(res, rej) {
     if (document.querySelector('script[src="' + src + '"]')) { res(); return; }
@@ -1209,11 +1204,11 @@ function loadScript(src) {
 }
 
 async function genDocx(modBlob, data, option) {
-  await loadZipLib();
+  // Utiliser JSZip (déjà chargé en <head>)
   const ab  = await modBlob.arrayBuffer();
-  const zip = new PizZip(ab);
+  const zip = await JSZip.loadAsync(ab);
 
-  var xml = zip.file('word/document.xml').asText();
+  var xml = await zip.file('word/document.xml').async('string');
 
   // 1. Fusionner les placeholders fragmentés entre runs (Word fragmente à cause du correcteur)
   xml = fusePlaceholders(xml);
@@ -1242,7 +1237,7 @@ async function genDocx(modBlob, data, option) {
 
   zip.file('word/document.xml', xml);
 
-  var out = zip.generate({
+  var out = await zip.generateAsync({
     type:        'blob',
     mimeType:    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     compression: 'DEFLATE'

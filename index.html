@@ -265,7 +265,7 @@ code{background:var(--bg);border:1px solid var(--brd);border-radius:4px;padding:
         </div>
       </div>
       <div class="tw"><table>
-        <thead><tr><th>Réf. bail</th><th>Locataire</th><th>Appt.</th><th>Maison</th><th>Loyer</th><th>Date signature</th><th>Statut</th><th></th></tr></thead>
+        <thead><tr><th>Réf. bail</th><th>Locataire</th><th>Appt.</th><th>Maison</th><th>Date signature</th><th>Statut</th><th></th></tr></thead>
         <tbody id="bauxTb"><tr><td colspan="7" class="tc mut" style="padding:24px">Chargement…</td></tr></tbody>
       </table></div>
     </div>
@@ -951,7 +951,7 @@ async function loadBaux() {
   const st = document.getElementById('fSt').value;
   const sr = document.getElementById('fSr').value.toLowerCase();
   const tb = document.getElementById('bauxTb');
-  tb.innerHTML = '<tr><td colspan="8" class="tc"><div class="spin" style="margin:16px auto"></div></td></tr>';
+  tb.innerHTML = '<tr><td colspan="7" class="tc"><div class="spin" style="margin:16px auto"></div></td></tr>';
   try {
     let q = 'baux?select=*&order=created_at.desc';
     if (CU.role === 'maison' && CM) q += '&maison_id=eq.' + CM.id;
@@ -960,7 +960,7 @@ async function loadBaux() {
     if (!rows) rows = [];
     if (sr) rows = rows.filter(function(b) { return (b.locataire_nom||'').toLowerCase().includes(sr); });
     if (!rows.length) {
-      tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--mut)">Aucun bail trouvé</td></tr>';
+      tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--mut)">Aucun bail trouvé</td></tr>';
       return;
     }
     tb.innerHTML = rows.map(function(b) {
@@ -973,13 +973,12 @@ async function loadBaux() {
         '<td><strong>' + (b.locataire_nom||'—') + '</strong></td>' +
         '<td>' + (b.numero_appartement||'—') + '</td>' +
         '<td>' + (m?m.nom:'—') + '</td>' +
-        '<td>' + (b.montant_loyer ? mFr(b.montant_loyer)+'€' : '—') + '</td>' +
         '<td>' + (b.date_signature||'—') + '</td>' +
         '<td>' + bstat(b.statut) + '</td>' +
         '<td class="flex gap8">' + dl + del + '</td></tr>';
     }).join('');
   } catch(e) {
-    tb.innerHTML = '<tr><td colspan="8" class="tc mut" style="padding:16px">Erreur: ' + e.message + '</td></tr>';
+    tb.innerHTML = '<tr><td colspan="7" class="tc mut" style="padding:16px">Erreur: ' + e.message + '</td></tr>';
   }
 }
 

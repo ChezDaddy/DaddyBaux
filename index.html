@@ -634,6 +634,7 @@ const BAIL_FIELDS = [
   {k:'provision_garantie',          l:'Dépôt garantie (€)',          sec:'Financier', t:'num'},
   {k:'plafond_honoraires_gestion',  l:'Plafond honoraires (€)',      sec:'Financier', t:'num'},
   {k:'plafond_etat_lieux',          l:'Plafond état des lieux (€)',  sec:'Financier', t:'num'},
+  {k:'etage',                       l:'Étage',                       sec:'Logement'},
 ];
 
 /* ── UTILISATEURS PAR DÉFAUT ── */
@@ -1211,14 +1212,12 @@ async function genDocx(modBlob, data, option) {
   var xml = await zip.file('word/document.xml').async('string');
 
   // 1. Fusionner les placeholders fragmentés entre runs (Word fragmente à cause du correcteur)
-  xml = fusePlaceholders(xml);
-
-  // 2. Supprimer l'option non choisie
+  // Supprimer l'option non choisie
   if (option === 1 || option === 2) {
     xml = removeOption(xml, option);
   }
 
-  // 3. Remplacer chaque placeholder par la valeur correspondante
+  // Remplacer chaque placeholder par la valeur correspondante
   Object.keys(data).forEach(function(k) {
     var val = String(data[k] || '');
     // Échapper les caractères XML spéciaux
@@ -1232,7 +1231,7 @@ async function genDocx(modBlob, data, option) {
     xml = xml.replace(new RegExp(ph, 'g'), safe);
   });
 
-  // 4. Appliquer le formatage bleu+gras sur les valeurs injectées
+  // Appliquer le formatage bleu+gras sur les valeurs injectées
   xml = applyBlueFormatting(xml, data);
 
   zip.file('word/document.xml', xml);
@@ -1383,9 +1382,10 @@ CORRESPONDANCES EXACTES (libellé dans la fiche → clé JSON) :
 - "Dépôt de Garantie (Caution) = {{provision_garantie}}" → provision_garantie (nombre ex: 692.91)
 - "honoraires = {{plafond_honoraires_gestion}}" → plafond_honoraires_gestion (nombre ex: 234.59)
 - "état des lieux = {{plafond_etat_lieux}}" → plafond_etat_lieux (nombre ex: 88.08)
+- "étage : {{etage}}" → etage (ex: 2ème, RDC, 1er)
 
 Retourne ce JSON complété :
-{"locataire_nom":"","locataire_date_lieu_naissance":"","locataire_nationalite":"","locataire_regime_matrimonial":"","locataire_adresse":"","locataire_telephone":"","locataire_email":"","date_signature":"","option_bail":"","date_posterieure":"","numero_appartement":"","garant_prenom":"","garant_adresse":"","appartement_meuble":"","equipement_pmr":"","surface_habitable":"","surface_carrez":"","appt_type":"","nb_chambres":"","nb_salle_douche":"","nb_salon":"","depenses_energie_annuelles":"","montant_loyer":"","provision_charges":"","provision_garantie_mois":"","provision_garantie":"","plafond_honoraires_gestion":"","plafond_etat_lieux":""}`;
+{"locataire_nom":"","locataire_date_lieu_naissance":"","locataire_nationalite":"","locataire_regime_matrimonial":"","locataire_adresse":"","locataire_telephone":"","locataire_email":"","date_signature":"","option_bail":"","date_posterieure":"","numero_appartement":"","garant_prenom":"","garant_adresse":"","appartement_meuble":"","equipement_pmr":"","surface_habitable":"","surface_carrez":"","appt_type":"","nb_chambres":"","nb_salle_douche":"","nb_salon":"","depenses_energie_annuelles":"","montant_loyer":"","provision_charges":"","provision_garantie_mois":"","provision_garantie":"","plafond_honoraires_gestion":"","plafond_etat_lieux":"","etage":""}`;
 
   const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method: 'POST',

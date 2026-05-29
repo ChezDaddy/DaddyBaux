@@ -965,25 +965,48 @@ async function loadBaux() {
     }
     tb.innerHTML = rows.map(function(b) {
       const m = allM.find(function(x) { return x.id == b.maison_id; });
-      const dl = b.docx_path ? '<button class="btn bp" onclick="dlSb(\'' + b.docx_path + '\',\'bail.docx\')">⬇️</button>' : '';
+      const dl = b.docx_path ? '<button class="btn bp" onclick="dlSb(\'' + b.docx_path + '\',\'bail_' + (b.locataire_nom||'loc').replace(/\s+/g,'_') + '.docx\')">⬇️</button>' : '';
+      const del = CU.role === 'admin' ? '<button class="btn bd" onclick="delBail(\'' + b.id + '\',\'' + (b.locataire_nom||'').replace(/'/g,"\\'") + '\',' + (b.docx_path ? '\''+b.docx_path+'\'' : 'null') + ')">🗑️</button>' : '';
       return '<tr><td><strong>' + (b.locataire_nom||'—') + '</strong></td><td>' + (m?m.nom:'—') + '</td>' +
         '<td>' + (b.montant_loyer ? mFr(b.montant_loyer)+'€' : '—') + '</td>' +
         '<td>' + (b.date_signature||'—') + '</td>' +
         '<td>' + (b.created_at ? new Date(b.created_at).toLocaleDateString('fr-FR') : '—') + '</td>' +
         '<td>' + bstat(b.statut) + '</td>' +
-        '<td class="flex gap8">' + dl + '<button class="btn bd" onclick="delBail(\'' + b.id + '\')">🗑️</button></td></tr>';
+        '<td class="flex gap8">' + dl + del + '</td></tr>';
     }).join('');
   } catch(e) {
     tb.innerHTML = '<tr><td colspan="7" class="tc mut" style="padding:16px">Erreur: ' + e.message + '</td></tr>';
   }
 }
 
-async function delBail(id) {
-  cf2('Supprimer ce bail ?', '', async function() {
-    await sbQ('baux?id=eq.' + id, {method:'DELETE'});
-    toast('Bail supprimé', 'ok');
-    loadBaux();
-  });
+async function delBail(id, nom, docxPath) {
+  // Seul l'admin peut supprimer
+  if (CU.role !== 'admin') { toast('Action réservée à l\'administrateur', 'err'); return; }
+
+  const hasDocx = docxPath && docxPath !== 'null';
+  const msg = hasDocx
+    ? 'Le DOCX sera téléchargé automatiquement avant suppression.'
+    : 'Ce bail n\'a pas de document généré.';
+
+  cf2(
+    '⚠️ Supprimer le bail de ' + (nom||'ce locataire') + ' ?',
+    msg,
+    async function() {
+      // Télécharger le DOCX si disponible
+      if (hasDocx) {
+        try {
+          const blob = await sbDown('baux-generes', docxPath);
+          saveAs(blob, 'ARCHIVE_bail_' + (nom||'locataire').replace(/\s+/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.docx');
+        } catch(e) {
+          console.warn('Impossible de télécharger le DOCX avant suppression:', e);
+        }
+      }
+      // Supprimer en base
+      await sbQ('baux?id=eq.' + id, {method:'DELETE'}).catch(function(e){ toast('Erreur suppression: '+e.message,'err'); return; });
+      toast('Bail supprimé' + (hasDocx ? ' — DOCX archivé' : ''), 'ok');
+      loadBaux();
+    }
+  );
 }
 
 /* ── BAIL WIZARD ── */
@@ -1124,9 +1147,11 @@ function collectData() {
 
   if (document.getElementById('optG').value === 'oui') {
     d.garant_prenom  = document.getElementById('gPre').value;
+    d.garant_nom     = d.garant_prenom; // alias pour {{garant_nom}} dans le template
     d.garant_adresse = document.getElementById('gAdr').value;
   } else {
     d.garant_prenom  = '';
+    d.garant_nom     = '';
     d.garant_adresse = '';
   }
 
@@ -1239,7 +1264,7 @@ async function genDocx(modBlob, data, option) {
   var out = await zip.generateAsync({
     type:        'blob',
     mimeType:    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    compression: 'DEFLATE'
+    compression: 'STORE'
   });
   return out;
 }
@@ -1843,6 +1868,7 @@ function n2l(n) {
   } else {
     res = cent(ent);
   }
+  res += ' euro' + (ent > 1 ? 's' : '');
   if (dec > 0) res += ' et ' + diz(dec) + ' centime' + (dec > 1 ? 's' : '');
   return res.charAt(0).toUpperCase() + res.slice(1);
 }

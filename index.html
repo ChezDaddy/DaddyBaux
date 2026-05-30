@@ -1391,11 +1391,17 @@ Ignore les "#N/A". Retourne UNIQUEMENT un JSON valide, sans texte ni backticks. 
 CORRESPONDANCES EXACTES (libellé dans la fiche → clé JSON) :
 - "Date de signature du bail : {{date_signature}}" → date_signature (format JJ/MM/AAAA)
 - "Locataire (nom, prénom) : {{locataire_nom}}" → locataire_nom (nom ET prénom)
-- "{{numero_appartement}}" en haut à droite → numero_appartement
+- "Date de naissance & Lieu : {{locataire_date_lieu_naissance}}" → locataire_date_lieu_naissance
+- "Nationalité : {{locataire_nationalite}}" → locataire_nationalite
+- "Régime matrimonial : {{locataire_regime_matrimonial}}" → locataire_regime_matrimonial
+- "Adresse : {{locataire_adresse}}" (section locataire, en haut) → locataire_adresse
+- "Téléphone mobile : {{locataire_telephone}}" (section locataire uniquement, AVANT la section Garant) → locataire_telephone. ATTENTION : ne pas utiliser le téléphone du garant. Si le locataire n'a pas de téléphone, mettre "".
+- "Mail : {{locataire_email}}" (section locataire uniquement) → locataire_email
+- "{{numero_appartement}}" en haut à droite de la fiche → numero_appartement
 - "Option 1 cochée" ou "Option 2 cochée" → option_bail ("1" ou "2")
-- "{{date_posterieure}}" → date_posterieure (si option 2 seulement)
-- "Garant (nom, prénom) : {{garant_nom}}" → garant_prenom (nom ET prénom)
-- "Adresse : {{garant_adresse}}" (section garant) → garant_adresse
+- "{{date_posterieure}}" → date_posterieure (si option 2 seulement, sinon "")
+- "Garant (nom, prénom) : {{garant_nom}}" → garant_prenom (nom ET prénom du garant, "" si absent)
+- "Adresse : {{garant_adresse}}" (section garant, PAS l'adresse du locataire) → garant_adresse
 - "Appartement meublé : {{appartement_meuble}}" → appartement_meuble ("meublé" ou "non meublé")
 - "Equipement PMR : {{equipement_pmr}}" → equipement_pmr ("Équipé PMR" ou "Non équipé PMR")
 - "Surface habitable - au sol : {{surface_habitable}}" → surface_habitable (nombre ex: 29.07)
